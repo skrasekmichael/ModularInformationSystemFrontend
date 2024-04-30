@@ -1,0 +1,75 @@
+﻿@page "/teams/{teamGuid:guid}"
+
+@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+@inject ApiClient ApiClient
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+@inject IToastService ToastService
+@inject IMessenger Messenger
+
+<div class="body-small">
+	<div class="d-flex align-center" style="margin-bottom: 16px">
+		<FluentProgressRing Visible="@(team is null)" />
+		<h1 class="d-flex no-margin padding-small">@(team?.Name ?? "Team")</h1>
+	</div>
+	<FluentDivider />
+	@if (team is not null)
+	{
+		<FluentDataGrid Items="@(team.Members.AsQueryable())">
+			<PropertyColumn Property="@(p => p.Nickname)" Title="Nickname" />
+			<PropertyColumn Property="@(p => p.Role.ToString())" Title="Team Role" />
+		</FluentDataGrid>
+	}
+	<div class="padding-small">
+		<FluentButton IconStart="@(new Icons.Filled.Size20.Delete())" Appearance="Appearance.Accent" OnClick="@DeleteAsync">Delete</FluentButton>
+	</div>
+</div>
+
+@code
+{
+	[Parameter]
+	public Guid TeamGuid { get; init; } = default!;
+
+	private TeamResponse? team = null;
+
+	protected override async Task OnInitializedAsync()
+	{
+		var teamResult = await ApiClient.GetTeamAsync(TeamId.FromGuid(TeamGuid), CTS.Token);
+		if (teamResult.IsSuccess)
+		{
+			team = teamResult.Value;
+		}
+		else
+		{
+			ToastService.ShowError(teamResult.Error.Message);
+			NavigationManager.NavigateTo("/events");
+		}
+	}
+
+	public async Task DeleteAsync()
+	{
+		var confirm = await DialogService.ShowConfirmationAsync("Do you want to delete team?", "Yes", "No");
+		if ((await confirm.Result).Cancelled == true)
+		{
+			return;
+		}
+
+		var teamId = TeamId.FromGuid(TeamGuid);
+		var result = await ApiClient.DeleteTeamAsync(teamId, CTS.Token);
+		if (result.IsFailure)
+		{
+			ToastService.ShowError(result.Error.Message);
+			return;
+		}
+
+		ToastService.ShowSuccess("Team successfully deleted.");
+		Messenger.Send(new TeamDeletedMessage
+		{
+			TeamId = teamId
+		});
+		NavigationManager.NavigateTo("/events");
+	}
+}

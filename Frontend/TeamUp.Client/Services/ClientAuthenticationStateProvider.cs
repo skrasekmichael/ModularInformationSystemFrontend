@@ -1,6 +1,8 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
+using BitzArt.Blazor.Cookies;
+
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -13,15 +15,18 @@ public sealed record UserInfo
 	public required string Username { get; set; }
 }
 
-
-internal sealed class PersistentAuthenticationStateProvider : AuthenticationStateProvider
+internal sealed class ClientAuthenticationStateProvider : AuthenticationStateProvider
 {
 	private static readonly AuthenticationState Anonymous = new(new ClaimsPrincipal(new ClaimsIdentity()));
 
 	private AuthenticationState State { get; set; } = Anonymous;
 
-	public PersistentAuthenticationStateProvider(PersistentComponentState state)
+	private readonly ICookieService _cookieService;
+
+	public ClientAuthenticationStateProvider(PersistentComponentState state, ICookieService cookieService)
 	{
+		_cookieService = cookieService;
+
 		if (!state.TryTakeFromJson<UserInfo>(nameof(UserInfo), out var userInfo) || userInfo is null)
 		{
 			return;
@@ -37,7 +42,11 @@ internal sealed class PersistentAuthenticationStateProvider : AuthenticationStat
 		State = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity(claims, "JWT")));
 	}
 
-	public override Task<AuthenticationState> GetAuthenticationStateAsync() => Task.FromResult(State);
+	public override async Task<AuthenticationState> GetAuthenticationStateAsync()
+	{
+		var cookie = await _cookieService.GetAsync("JWT");
+		return cookie is null ? Anonymous : State;
+	}
 
 	public void Login(string jwt)
 	{

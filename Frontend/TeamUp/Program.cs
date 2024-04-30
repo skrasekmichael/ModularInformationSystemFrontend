@@ -1,5 +1,7 @@
 using BitzArt.Blazor.Cookies;
 
+using CommunityToolkit.Mvvm.Messaging;
+
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.FluentUI.AspNetCore.Components;
 
@@ -19,10 +21,13 @@ builder.Services
 builder.AddBlazorCookies();
 builder.Services.AddFluentUIComponents();
 
+builder.Services.AddScoped<IMessenger, WeakReferenceMessenger>();
+
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddApiClient(builder.Configuration["BackendUrl"]!);
 
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddScoped<AuthenticationStateProvider, PersistingAuthenticationStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
 
 builder.Services
 	.AddAuthentication(JWTCookieSchemeOptions.Scheme)

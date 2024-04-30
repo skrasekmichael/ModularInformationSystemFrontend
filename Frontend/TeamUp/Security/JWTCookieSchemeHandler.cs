@@ -3,10 +3,7 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Http.Extensions;
-using Microsoft.AspNetCore.Server.IIS;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace TeamUp.Security;
@@ -33,8 +30,6 @@ public sealed class JWTCookieSchemeHandler : AuthenticationHandler<JWTCookieSche
 
 	protected override Task HandleChallengeAsync(AuthenticationProperties properties)
 	{
-		Logger.LogWarning("HELLO");
-
 		if (Request.Cookies.TryGetValue("JWT", out var jwtCookie))
 		{
 			var handler = new JwtSecurityTokenHandler();
@@ -46,7 +41,7 @@ public sealed class JWTCookieSchemeHandler : AuthenticationHandler<JWTCookieSche
 			return Task.FromResult(result);
 		}
 
-		Request.HttpContext.Response.Redirect($"login?returnUrl={Request.GetEncodedUrl()}");
+		Request.HttpContext.Response.Redirect($"/login?returnUrl={Request.GetEncodedUrl()}");
 		return Task.FromResult(AuthenticateResult.Fail("Missing JWT cookie"));
 	}
 }

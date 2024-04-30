@@ -7,12 +7,7 @@
 @using System.ComponentModel.DataAnnotations
 @using System.Text.Json
 @using BitzArt.Blazor.Cookies
-@using TeamUp.ApiLayer
-@using TeamUp.Client.Components
-@using TeamUp.Contracts
-@using TeamUp.Contracts.Users
 
-@inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject ApiClient ApiClient
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -22,7 +17,7 @@
 
 <div class="d-flex flex-dir-column h-screen">
 	<FluentSpacer />
-	<FluentCard Style="max-width: 550px; margin-bottom: 200px" Class="h-auto margin-auto padding-large">
+	<FluentCard Style="margin-bottom: 200px" Class="body-small h-auto margin-auto padding-large">
 		<h1 style="margin-bottom: 16px">Register</h1>
 		<FluentDivider />
 		<div style="margin-top: 16px"></div>

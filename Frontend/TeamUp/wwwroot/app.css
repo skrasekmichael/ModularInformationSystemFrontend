@@ -176,8 +176,22 @@ code {
 	}
 }
 
+/* --- */
+
+.body-small {
+	max-width: 550px;
+}
+
+.font-large {
+	font-size: large;
+}
+
 .font-small {
-	font-size: small
+	font-size: small;
+}
+
+.font-bold {
+	font-weight: bold;
 }
 
 .d-flex {
@@ -190,6 +204,10 @@ code {
 
 .d-block {
 	display: block;
+}
+
+.align-center {
+	align-items: center;
 }
 
 .flex-dir-column {

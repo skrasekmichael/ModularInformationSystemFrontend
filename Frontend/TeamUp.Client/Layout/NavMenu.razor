@@ -1,10 +1,13 @@
-﻿@using BitzArt.Blazor.Cookies
-@using TeamUp.Client.Components
-@using TeamUp.Client.Services
+﻿@rendermode InteractiveAuto
 
-@inject NavigationManager NavigationManager
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@inject ICookieService CookieService
+@inherits CancellableComponent
+
+@using BitzArt.Blazor.Cookies
+@using System.Text.Json
+@using System.Security.Claims
+
+@inject ApiClient ApiClient
+@inject IMessenger Messenger
 
 <div class="navmenu">
 	<input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
@@ -12,11 +15,32 @@
 	<nav class="sitenav" aria-labelledby="main-menu" onclick="document.getElementById('navmenu-toggle').click();">
 		<AuthorizeView>
 			<Authorized>
-				<div class="text-center padding-large">@context.User.Identity?.Name</div>
+				<div class="text-center padding-large">
+					<FluentPersona Class="padding-small margin-auto" Initials="@(GetInitials(context.User.Identity?.Name))" ImageSize="60px" />
+					<strong>@context.User.Identity?.Name</strong>
+					<div>@context.User.FindFirst(ClaimTypes.Email)?.Value</div>
+				</div>
+				<FluentDivider />
 			</Authorized>
 		</AuthorizeView>
 		<FluentNavMenu Id="main-menu" Width="250" Collapsible="false" Title="Navigation menu">
-			<FluentNavLink Href="teams" Icon="@(new Icons.Regular.Size20.PeopleTeam())" IconColor="Color.Accent">Teams</FluentNavLink>
+			<FluentNavGroup Title="Teams" Expanded="@(teams is not null)" Icon="@(new Icons.Regular.Size20.PeopleTeam())" IconColor="Color.Accent">
+				@if (teams is not null)
+				{
+					@foreach (var team in teams)
+					{
+						<FluentNavLink Href="@($"teams/{team.TeamId.Value}")" Icon="@(new Icons.Regular.Size12.People())" IconColor="Color.Info">
+							@(team.Name)
+						</FluentNavLink>
+					}
+
+					@if (teams.Count > 0)
+					{
+						<FluentDivider />
+					}
+				}
+				<FluentNavLink Href="teams/create" Icon="@(new Icons.Regular.Size20.Add())" IconColor="Color.Accent">New Team</FluentNavLink>
+			</FluentNavGroup>
 			<FluentNavLink Href="events" Icon="@(new Icons.Regular.Size20.Calendar())" IconColor="Color.Accent">Events</FluentNavLink>
 			<FluentNavLink Href="invitations" Icon="@(new Icons.Regular.Size20.MailArrowDown())" IconColor="Color.Accent">My Invitations</FluentNavLink>
 			<FluentNavLink Href="account" Icon="@(new Icons.Regular.Size20.PersonAccounts())" IconColor="Color.Accent">Account</FluentNavLink>
@@ -26,3 +50,73 @@
 		</div>
 	</nav>
 </div>
+
+@code
+{
+	private List<TeamSlimResponse>? teams = null;
+
+	protected override async Task OnInitializedAsync()
+	{
+		Messenger.Register<TeamCreatedMessage>(this, TeamCreatedHandler);
+		Messenger.Register<TeamDeletedMessage>(this, TeamDeletedHandler);
+
+		var teamsResult = await ApiClient.GetMyTeamsAsync(CTS.Token);
+		if (teamsResult.IsSuccess)
+		{
+			teams = teamsResult.Value;
+		}
+	}
+
+	private string? GetInitials(string? name)
+	{
+		if (name is null)
+		{
+			return null;
+		}
+
+		var initials = name
+			.ToCharArray()
+			.Where(c => char.IsUpper(c))
+			.ToArray();
+
+		return initials.Length switch
+		{
+			0 => name.FirstOrDefault().ToString(),
+			> 3 => initials.First().ToString(),
+			_ => string.Join("", initials)
+		};
+	}
+
+	private void TeamCreatedHandler(object self, TeamCreatedMessage message)
+	{
+		if (self is not NavMenu menu || menu.teams is null)
+		{
+			return;
+		}
+
+		menu.teams.Add(new TeamSlimResponse
+		{
+			TeamId = message.TeamId,
+			Name = message.Name
+		});
+
+		menu.StateHasChanged();
+	}
+
+	private void TeamDeletedHandler(object self, TeamDeletedMessage message)
+	{
+		if (self is not NavMenu menu || menu.teams is null)
+		{
+			return;
+		}
+
+		var deletedTeam = menu.teams.Find(team => team.TeamId == message.TeamId);
+		if (deletedTeam is null)
+		{
+			return;
+		}
+
+		menu.teams.Remove(deletedTeam);
+		menu.StateHasChanged();
+	}
+}

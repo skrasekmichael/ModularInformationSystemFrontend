@@ -1,0 +1,62 @@
+﻿@page "/teams/create"
+
+@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+@using System.Text.Json
+@using BitzArt.Blazor.Cookies
+
+@inject NavigationManager NavigationManager
+@inject ApiClient ApiClient
+@inject IToastService ToastService
+@inject IMessenger Messenger
+
+<PageTitle>Create Team</PageTitle>
+
+<div Class="body-small h-auto padding-large">
+	<h1 style="margin-bottom: 16px">Create Team</h1>
+	<FluentDivider />
+	<EditForm Model="@Input" OnValidSubmit="CreateTeamAsync" FormName="CreateTeamForm" Style="margin-top: 16px">
+		<CustomValidation @ref="ValidationComponent" />
+		<FluentStack Orientation="Orientation.Vertical">
+			<FluentTextField @bind-value="Input.Name" Immediate="true" Required="true" Placeholder="team name" Label="Team Name" Class="w-100" />
+			<FluentValidationMessage For="() => Input.Name" Class="text-danger" />
+			<FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="margin-top: 8px">Create</FluentButton>
+		</FluentStack>
+	</EditForm>
+</div>
+
+@code
+{
+	[SupplyParameterFromForm]
+	private CreateTeamRequest Input { get; set; } = new()
+	{
+		Name = "",
+	};
+
+	private CustomValidation ValidationComponent { get; set; } = null!;
+
+	public async Task CreateTeamAsync()
+	{
+		var result = await ApiClient.CreateTeamAsync(Input, CTS.Token);
+		if (result.IsFailure)
+		{
+			if (result.Error is ApiValidationError error)
+			{
+				ValidationComponent.DisplayErrors(error.Errors);
+			}
+
+			ToastService.ShowError(result.Error.Message);
+			return;
+		}
+
+		ToastService.ShowSuccess("Team successfully created.");
+		Messenger.Send(new TeamCreatedMessage
+		{
+			TeamId = result.Value,
+			Name = Input.Name
+		});
+		NavigationManager.NavigateTo($"/teams/{result.Value.Value}");
+	}
+}

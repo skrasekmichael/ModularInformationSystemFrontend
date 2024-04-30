@@ -3,28 +3,30 @@ using System.Security.Claims;
 
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Components.Web;
 
-using TeamUp.Client;
 using TeamUp.Client.Services;
 
 namespace TeamUp.Services;
 
-internal sealed class PersistingAuthenticationStateProvider : ServerAuthenticationStateProvider, IDisposable
+internal sealed class ServerAuthenticationStateProvider : Microsoft.AspNetCore.Components.Server.ServerAuthenticationStateProvider, IDisposable
 {
+	private static readonly AuthenticationState Anonymous = new(new ClaimsPrincipal(new ClaimsIdentity()));
+
 	private readonly PersistentComponentState _state;
 	private readonly PersistingComponentStateSubscription _subscription;
-	private readonly ILogger<PersistingAuthenticationStateProvider> _logger;
+	private readonly ILogger<ServerAuthenticationStateProvider> _logger;
 	private Task<AuthenticationState>? _authenticationStateTask;
+	private readonly IHttpContextAccessor _contextAccessor;
 
-	public PersistingAuthenticationStateProvider(PersistentComponentState persistentComponentState, ILogger<PersistingAuthenticationStateProvider> logger)
+	public ServerAuthenticationStateProvider(PersistentComponentState persistentComponentState, ILogger<ServerAuthenticationStateProvider> logger, IHttpContextAccessor contextAccessor)
 	{
 		_state = persistentComponentState;
 
 		AuthenticationStateChanged += OnAuthenticationStateChanged;
 		_subscription = _state.RegisterOnPersisting(OnPersistingAsync, RenderMode.InteractiveWebAssembly);
 		_logger = logger;
+		_contextAccessor = contextAccessor;
 	}
 
 	private void OnAuthenticationStateChanged(Task<AuthenticationState> task)
@@ -65,5 +67,11 @@ internal sealed class PersistingAuthenticationStateProvider : ServerAuthenticati
 	{
 		_subscription.Dispose();
 		AuthenticationStateChanged -= OnAuthenticationStateChanged;
+	}
+
+	public void Logout()
+	{
+		_logger.LogInformation("Logged out");
+		NotifyAuthenticationStateChanged(Task.FromResult(Anonymous));
 	}
 }

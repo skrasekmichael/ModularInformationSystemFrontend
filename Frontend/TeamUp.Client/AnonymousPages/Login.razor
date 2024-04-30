@@ -2,18 +2,11 @@
 
 @rendermode InteractiveAuto
 
-@layout EmptyLayout
-
 @inherits CancellableComponent
 
 @using System.ComponentModel.DataAnnotations
 @using System.Text.Json
 @using BitzArt.Blazor.Cookies
-@using TeamUp.ApiLayer
-@using TeamUp.Client.Components
-@using TeamUp.Client.Services
-@using TeamUp.Contracts
-@using TeamUp.Contracts.Users
 
 @inject NavigationManager NavigationManager
 @inject ApiClient ApiClient
@@ -25,7 +18,7 @@
 
 <div class="d-flex flex-dir-column h-screen">
 	<FluentSpacer />
-	<FluentCard Style="max-width: 550px; margin-bottom: 200px" Class="h-auto margin-auto padding-large">
+	<FluentCard Style="margin-bottom: 200px" Class="body-small h-auto margin-auto padding-large">
 		<h1 style="margin-bottom: 16px">Login</h1>
 		<FluentDivider />
 		<EditForm Model="@Input" OnValidSubmit="LoginAsync" FormName="LoginForm" Style="margin-top: 16px">
@@ -87,7 +80,7 @@
 		}
 
 		await CookieService.SetAsync("JWT", result.Value, null, CTS.Token);
-		if (AuthenticationStateProvider is PersistentAuthenticationStateProvider persistAuthProvider)
+		if (AuthenticationStateProvider is ClientAuthenticationStateProvider persistAuthProvider)
 		{
 			persistAuthProvider.Login(result.Value);
 			Redirect();

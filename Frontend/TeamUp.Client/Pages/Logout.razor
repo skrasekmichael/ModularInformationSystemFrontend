@@ -2,27 +2,12 @@
 
 @inherits CancellableComponent
 
-@using BitzArt.Blazor.Cookies
-@using TeamUp.Client.Services
-
-@inject NavigationManager NavigationManager
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@inject ICookieService CookieService
+@inject IAuthService AuthService
 
 @code
 {
 	protected override async Task OnInitializedAsync()
 	{
-		await CookieService.RemoveAsync("JWT", CTS.Token);
-		if (AuthenticationStateProvider is PersistentAuthenticationStateProvider persistAuthProvider)
-		{
-			persistAuthProvider.Logout();
-			Redirect();
-			return;
-		}
-
-		Redirect(true);
+		await AuthService.LogoutAsync("/login", CTS.Token);
 	}
-
-	private void Redirect(bool forceLoad = false) => NavigationManager.NavigateTo($"login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}", forceLoad);
 }
