@@ -1,6 +1,7 @@
 @import "/_content/Microsoft.FluentUI.AspNetCore.Components/css/reboot.css";
 
 body {
+	/* https://cdn.jsdelivr.net/npm/@devyr/mdl2-ui-icons@1.0.2/fonts/mdl2.ttf */
 	--body-font: "Segoe UI Variable", "Segoe UI", sans-serif;
 	font-family: var(--body-font);
 	font-size: var(--type-ramp-base-font-size);
@@ -178,6 +179,14 @@ code {
 
 /* --- */
 
+.icon {
+	font-family: "MDL2 UI";
+	font-size: 18px;
+	margin-top: 2px;
+	width: 10px;
+	margin-left: -8px;
+}
+
 .body-small {
 	max-width: 550px;
 }
@@ -204,6 +213,10 @@ code {
 
 .d-block {
 	display: block;
+}
+
+.content-center {
+	align-content: center;
 }
 
 .align-center {
@@ -256,6 +269,10 @@ code {
 
 .margin-small {
 	margin: 4px 8px;
+}
+
+.margin-sym {
+	margin: 4px;
 }
 
 .w-auto {

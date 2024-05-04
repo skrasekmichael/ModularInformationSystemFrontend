@@ -1,0 +1,13 @@
+﻿@implements IDialogContentComponent<EmailInput>
+
+@using System.ComponentModel.DataAnnotations
+
+<FluentDialogBody>
+	<FluentTextField @bind-Value="@Content.Email">Email:</FluentTextField>
+</FluentDialogBody>
+
+@code
+{
+	[Parameter]
+	public EmailInput Content { get; set; } = default!;
+}

@@ -57,14 +57,26 @@
 
 	protected override async Task OnInitializedAsync()
 	{
-		Messenger.Register<TeamCreatedMessage>(this, TeamCreatedHandler);
-		Messenger.Register<TeamDeletedMessage>(this, TeamDeletedHandler);
+		Messenger.Register<NavMenu, TeamCreatedMessage>(this, TeamCreatedHandler);
+		Messenger.Register<NavMenu, TeamDeletedMessage>(this, TeamDeletedHandler);
+		Messenger.Register<NavMenu, RefreshTeamsMessage>(this, async (sender, _) => await LoadTeamsAsync());
 
+		await LoadTeamsAsync();
+	}
+
+	private async Task LoadTeamsAsync()
+	{
 		var teamsResult = await ApiClient.GetMyTeamsAsync(CTS.Token);
 		if (teamsResult.IsSuccess)
 		{
 			teams = teamsResult.Value;
 		}
+		else if (teams is null)
+		{
+			teams = [];
+		}
+
+		StateHasChanged();
 	}
 
 	private string? GetInitials(string? name)
@@ -87,36 +99,36 @@
 		};
 	}
 
-	private void TeamCreatedHandler(object self, TeamCreatedMessage message)
+	private void TeamCreatedHandler(NavMenu self, TeamCreatedMessage message)
 	{
-		if (self is not NavMenu menu || menu.teams is null)
+		if (self.teams is null)
 		{
 			return;
 		}
 
-		menu.teams.Add(new TeamSlimResponse
+		self.teams.Add(new TeamSlimResponse
 		{
 			TeamId = message.TeamId,
 			Name = message.Name
 		});
 
-		menu.StateHasChanged();
+		self.StateHasChanged();
 	}
 
-	private void TeamDeletedHandler(object self, TeamDeletedMessage message)
+	private void TeamDeletedHandler(NavMenu self, TeamDeletedMessage message)
 	{
-		if (self is not NavMenu menu || menu.teams is null)
+		if (self.teams is null)
 		{
 			return;
 		}
 
-		var deletedTeam = menu.teams.Find(team => team.TeamId == message.TeamId);
+		var deletedTeam = self.teams.Find(team => team.TeamId == message.TeamId);
 		if (deletedTeam is null)
 		{
 			return;
 		}
 
-		menu.teams.Remove(deletedTeam);
-		menu.StateHasChanged();
+		self.teams.Remove(deletedTeam);
+		self.StateHasChanged();
 	}
 }

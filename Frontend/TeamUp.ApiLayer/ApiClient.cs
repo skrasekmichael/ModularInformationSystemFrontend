@@ -80,6 +80,27 @@ public sealed partial class ApiClient
 		return await SendRequestAsync<TResponse>(request, ct);
 	}
 
+	private Task<Result> SendAsync<TRequest>(HttpMethod method, string uri, TRequest payload, CancellationToken ct) =>
+		SendAsync<TRequest>(method, uri, payload, null, ct);
+
+	private async Task<Result> SendAsync<TRequest>(HttpMethod method, string uri, TRequest? payload, Action<HttpRequestMessage>? configure, CancellationToken ct)
+	{
+		var json = JsonSerializer.Serialize(payload);
+		var request = new HttpRequestMessage
+		{
+			Method = method,
+			RequestUri = new Uri(uri, UriKind.Relative),
+			Content = new StringContent(json, Encoding.UTF8, "application/json"),
+		};
+
+		if (configure is not null)
+		{
+			configure(request);
+		}
+
+		return await SendRequestAsync(request, ct);
+	}
+
 	private async Task<Result> SendRequestAsync(HttpRequestMessage request, CancellationToken ct)
 	{
 		await InjectAuthToken(request, ct);

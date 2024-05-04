@@ -31,7 +31,7 @@ public sealed class AuthService : IAuthService
 		await _cookieService.RemoveAsync("JWT", ct);
 		if (_authenticationStateProvider is ServerAuthenticationStateProvider authProvider)
 		{
-			authProvider.Logout();
+			//authProvider.Logout();
 		}
 
 		_navigationManager.NavigateTo(url);

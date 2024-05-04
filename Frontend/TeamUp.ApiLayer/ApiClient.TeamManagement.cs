@@ -1,5 +1,8 @@
-﻿using RailwayResult;
+﻿using System.Collections.Generic;
 
+using RailwayResult;
+
+using TeamUp.Contracts.Invitations;
 using TeamUp.Contracts.Teams;
 
 namespace TeamUp.ApiLayer;
@@ -15,6 +18,24 @@ public sealed partial class ApiClient
 	public Task<Result> DeleteTeamAsync(TeamId teamId, CancellationToken ct) =>
 		SendAsync(HttpMethod.Delete, $"/api/v1/teams/{teamId.Value}", ct);
 
+	public Task<Result> RemoveTeamMemberAsync(TeamId teamId, TeamMemberId memberId, CancellationToken ct) =>
+		SendAsync(HttpMethod.Delete, $"/api/v1/teams/{teamId.Value}/members/{memberId.Value}", ct);
+
 	public Task<Result<TeamResponse>> GetTeamAsync(TeamId teamId, CancellationToken ct) =>
 		SendAsync<TeamResponse>(HttpMethod.Get, $"/api/v1/teams/{teamId.Value}", ct);
+
+	public Task<Result<List<InvitationResponse>>> GetMyInvitationsAsync(CancellationToken ct) =>
+		SendAsync<List<InvitationResponse>>(HttpMethod.Get, "/api/v1/invitations", ct);
+
+	public Task<Result<List<TeamInvitationResponse>>> GetTeamInvitationsAsync(TeamId teamId, CancellationToken ct) =>
+		SendAsync<List<TeamInvitationResponse>>(HttpMethod.Get, $"/api/v1/invitations/teams/{teamId.Value}", ct);
+
+	public Task<Result> AcceptInvitationAsync(InvitationId invitationId, CancellationToken ct) =>
+		SendAsync(HttpMethod.Post, $"/api/v1/invitations/{invitationId.Value}/accept", ct);
+
+	public Task<Result> RemoveInvitationAsync(InvitationId invitationId, CancellationToken ct) =>
+		SendAsync(HttpMethod.Delete, $"/api/v1/invitations/{invitationId.Value}", ct);
+
+	public Task<Result> InviteUserAsync(InviteUserRequest request, CancellationToken ct) =>
+		SendAsync(HttpMethod.Post, "/api/v1/invitations", request, ct);
 }

@@ -51,7 +51,7 @@
 			return;
 		}
 
-		ToastService.ShowSuccess("Team successfully created.");
+		ToastService.ShowSuccess("Team has been successfully created.");
 		Messenger.Send(new TeamCreatedMessage
 		{
 			TeamId = result.Value,
