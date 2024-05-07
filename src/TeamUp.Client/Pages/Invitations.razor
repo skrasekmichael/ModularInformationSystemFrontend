@@ -1,0 +1,92 @@
+﻿@page "/invitations"
+
+@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+@inject ApiClient ApiClient
+@inject IToastService ToastService
+@inject IDialogService DialogService
+@inject IMessenger Messenger
+@inject InvitationsService InvitationService
+
+<div class="d-flex align-center" style="margin-bottom: 16px">
+	<h1 class="d-flex no-margin padding-small">Invitations</h1>
+	<FluentButton Appearance="Appearance.Outline" OnClick="() => LoadInvitationsAsync(true)" Style="margin-top: 4px">
+		<span class="icon">&#59180;</span>
+	</FluentButton>
+</div>
+
+<div class="body-small">
+@if (invitations is not null)
+{
+	<FluentDataGrid Loading="loading" Items="@(invitations.AsQueryable())">
+		<PropertyColumn Property="@(p => p.TeamName)" Title="Team Name" Class="content-center" />
+		<PropertyColumn Property="@(p => p.CreatedUtc)" Title="Created At" Class="content-center" />
+		<TemplateColumn Title="Action" Align="Align.Center" Class="content-center">
+			<FluentButton Appearance="Appearance.Accent" OnClick="@(() => AcceptInvitationAsync(context))">Accept</FluentButton>
+			<FluentButton Appearance="Appearance.Outline" OnClick="@(() => DeclineInvitationAsync(context))">Decline</FluentButton>
+		</TemplateColumn>
+	</FluentDataGrid>
+}
+</div>
+
+@code
+{
+	private List<InvitationResponse>? invitations = null;
+	private bool loading = true;
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadInvitationsAsync();
+	}
+
+	private async Task LoadInvitationsAsync(bool forceLoad = false)
+	{
+		loading = true;
+		var result = await InvitationService.GetMyInvitationsAsync(forceLoad, CTS.Token);
+		if (result.IsSuccess)
+		{
+			invitations = result.Value;
+			loading = false;
+			return;
+		}
+
+		loading = false;
+		ToastService.ShowError(result.Error.Message);
+	}
+
+	public async Task AcceptInvitationAsync(InvitationResponse invitation)
+	{
+		var result = await InvitationService.AcceptInvitationAsync(invitation.Id, CTS.Token);
+		if (result.IsFailure)
+		{
+			ToastService.ShowError(result.Error.Message);
+			return;
+		}
+
+		invitations!.Remove(invitation);
+		ToastService.ShowSuccess($"Invitation for the team {invitation.TeamName} has been accepted.");
+		Messenger.Send(new RefreshTeamsMessage());
+	}
+
+	public async Task DeclineInvitationAsync(InvitationResponse invitation)
+	{
+		var confirm = await DialogService.ShowConfirmationAsync($"Do you want to decline the invitation to {invitation.TeamName}?");
+		var confirmResult = await confirm.Result;
+		if (confirmResult.Cancelled)
+		{
+			return;
+		}
+
+		var result = await InvitationService.DeclineInvitationAsync(invitation.Id, CTS.Token);
+		if (result.IsFailure)
+		{
+			ToastService.ShowError(result.Error.Message);
+			return;
+		}
+
+		invitations!.Remove(invitation);
+		ToastService.ShowWarning($"Invitation for the team {invitation.TeamName} has been declined.");
+	}
+}

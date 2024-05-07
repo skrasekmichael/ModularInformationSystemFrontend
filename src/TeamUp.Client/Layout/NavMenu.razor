@@ -1,0 +1,146 @@
+﻿@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+@using BitzArt.Blazor.Cookies
+@using System.Text.Json
+@using System.Security.Claims
+
+@inject ApiClient ApiClient
+@inject IMessenger Messenger
+@inject TeamService TeamService
+
+<div class="navmenu">
+	<input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
+	<label for="navmenu-toggle" class="navmenu-icon"><FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" /></label>
+	<nav class="sitenav" aria-labelledby="main-menu" onclick="document.getElementById('navmenu-toggle').click();">
+		<AuthorizeView>
+			<Authorized>
+				<div class="text-center padding-large">
+					<FluentPersona Class="padding-small margin-auto" Initials="@(GetInitials(context.User.Identity?.Name))" ImageSize="60px" />
+					<strong>@context.User.Identity?.Name</strong>
+					<div>@context.User.FindFirst(ClaimTypes.Email)?.Value</div>
+				</div>
+				<FluentDivider />
+			</Authorized>
+		</AuthorizeView>
+		<FluentNavMenu Id="main-menu" Width="250" Collapsible="false" Title="Navigation menu">
+			<FluentNavGroup Expanded="@(teams is not null)" Icon="@(new Icons.Regular.Size20.PeopleTeam())" IconColor="Color.Accent">
+				<TitleTemplate>
+					<div class="d-flex align-center" style="margin: 2px">
+						<span>Teams</span>
+						<FluentSpacer />
+						<FluentButton Appearance="Appearance.Outline" OnClick="() => LoadTeamsAsync(true)" Style="margin-left: 4px; height: 29px">
+							<span class="icon-small">&#59180;</span>
+						</FluentButton>
+					</div>
+				</TitleTemplate>
+				<ChildContent>
+					@if (teams is not null)
+					{
+						@foreach (var team in teams)
+						{
+							<FluentNavLink Href="@($"teams/{team.TeamId.Value}")" Icon="@(new Icons.Regular.Size12.People())" IconColor="Color.Info">
+								@(team.Name)
+							</FluentNavLink>
+						}
+
+						@if (teams.Count > 0)
+						{
+							<FluentDivider />
+						}
+					}
+					<FluentNavLink Href="teams/create" Icon="@(new Icons.Regular.Size20.Add())" IconColor="Color.Accent">New Team</FluentNavLink>
+				</ChildContent>
+			</FluentNavGroup>
+			<FluentNavLink Href="events" Icon="@(new Icons.Regular.Size20.Calendar())" IconColor="Color.Accent">Events</FluentNavLink>
+			<FluentNavLink Href="invitations" Icon="@(new Icons.Regular.Size20.MailArrowDown())" IconColor="Color.Accent">My Invitations</FluentNavLink>
+			<FluentNavLink Href="account" Icon="@(new Icons.Regular.Size20.PersonAccounts())" IconColor="Color.Accent">Account</FluentNavLink>
+		</FluentNavMenu>
+		<div class="text-center">
+			<FluentAnchor Href="logout" Appearance="Appearance.Accent" class="w-90">Logout</FluentAnchor>
+		</div>
+	</nav>
+</div>
+
+@code
+{
+	private List<TeamSlimResponse>? teams = null;
+
+	protected override async Task OnInitializedAsync()
+	{
+		Messenger.Register<NavMenu, TeamCreatedMessage>(this, TeamCreatedHandler);
+		Messenger.Register<NavMenu, TeamDeletedMessage>(this, TeamDeletedHandler);
+		Messenger.Register<NavMenu, RefreshTeamsMessage>(this, async (sender, _) => await LoadTeamsAsync(true));
+
+		await LoadTeamsAsync();
+	}
+
+	private async Task LoadTeamsAsync(bool forceLoad = false)
+	{
+		var teamsResult = await TeamService.GetMyTeamsAsync(forceLoad, CTS.Token);
+		if (teamsResult.IsSuccess)
+		{
+			teams = teamsResult.Value;
+		}
+		else if (teams is null)
+		{
+			teams = [];
+		}
+
+		StateHasChanged();
+	}
+
+	private string? GetInitials(string? name)
+	{
+		if (name is null)
+		{
+			return null;
+		}
+
+		var initials = name
+			.ToCharArray()
+			.Where(c => char.IsUpper(c))
+			.ToArray();
+
+		return initials.Length switch
+		{
+			0 => name.FirstOrDefault().ToString(),
+			> 3 => initials.First().ToString(),
+			_ => string.Join("", initials)
+		};
+	}
+
+	private void TeamCreatedHandler(NavMenu self, TeamCreatedMessage message)
+	{
+		if (self.teams is null)
+		{
+			return;
+		}
+
+		self.teams.Add(new TeamSlimResponse
+		{
+			TeamId = message.TeamId,
+			Name = message.Name
+		});
+
+		self.StateHasChanged();
+	}
+
+	private void TeamDeletedHandler(NavMenu self, TeamDeletedMessage message)
+	{
+		if (self.teams is null)
+		{
+			return;
+		}
+
+		var deletedTeam = self.teams.Find(team => team.TeamId == message.TeamId);
+		if (deletedTeam is null)
+		{
+			return;
+		}
+
+		self.teams.Remove(deletedTeam);
+		self.StateHasChanged();
+	}
+}

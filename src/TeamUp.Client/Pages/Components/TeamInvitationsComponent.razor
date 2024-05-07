@@ -1,0 +1,126 @@
+﻿@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+@using TeamUp.Client.Pages.Panels
+
+@inject IToastService ToastService
+@inject IDialogService DialogService
+@inject InvitationsService InvitationService
+
+<div class="d-flex align-center w-100" style="margin-left: 3px">
+	<h4 class="padding-small no-margin">Invitations</h4>
+	<FluentButton Appearance="Appearance.Outline" OnClick="() => LoadInvitationsAsync(true)">
+		<span class="icon">&#59180;</span>
+	</FluentButton>
+	<FluentSpacer />
+	<FluentButton Appearance="Appearance.Accent" OnClick="InviteUserAsync">Invite User</FluentButton>
+</div>
+@if (invitations is not null)
+{
+	<FluentDataGrid Items="@(invitations.AsQueryable())">
+		<PropertyColumn Property="@(p => p.Email)" Title="Email" Class="content-center" />
+		<PropertyColumn Property="@(p => p.CreatedUtc)" Title="Created At" Class="content-center" />
+		<TemplateColumn Title="Action" Class="content-center">
+			<FluentButton IconStart="@(new Icons.Filled.Size20.Delete())" Appearance="Appearance.Accent" OnClick="@(() => DeleteInvitationAsync(context))" />
+		</TemplateColumn>
+	</FluentDataGrid>
+}
+
+@code
+{
+	[CascadingParameter]
+	public TeamContext TeamContext { get; set; } = null!;
+
+	private List<TeamInvitationResponse>? invitations;
+
+	private IDialogReference? _dialog;
+
+	private EmailInput emailInput = new()
+	{
+		Email = ""
+	};
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadInvitationsAsync();
+	}
+
+	private async Task LoadInvitationsAsync(bool forceLoad = false)
+	{
+		var result = await InvitationService.GetTeamInvitationsAsync(TeamContext.TeamId, forceLoad, CTS.Token);
+		if (result.IsSuccess)
+		{
+			invitations = result.Value;
+		}
+		else
+		{
+			ToastService.ShowError(result.Error.Message);
+		}
+	}
+
+	public async Task DeleteInvitationAsync(TeamInvitationResponse invitation)
+	{
+		var confirm = await DialogService.ShowConfirmationAsync($"Do you want to remove the invitation for {invitation.Email}?");
+		var confirmResult = await confirm.Result;
+		if (confirmResult.Cancelled)
+		{
+			return;
+		}
+
+		var result = await InvitationService.CancelInvitationAsync(TeamContext.TeamId, invitation.Id, CTS.Token);
+		if (result.IsFailure)
+		{
+			ToastService.ShowError(result.Error.Message);
+			return;
+		}
+
+		invitations!.Remove(invitation);
+		ToastService.ShowWarning($"Invitation for user {invitation.Email} has been removed.");
+	}
+
+	public async Task InviteUserAsync()
+	{
+		_dialog = await DialogService.ShowPanelAsync<InviteUserPanel>(emailInput, new DialogParameters<EmailInput>()
+		{
+			Content = emailInput,
+			Alignment = HorizontalAlignment.Right,
+			Title = $"Invite User",
+			PrimaryAction = "Invite",
+			SecondaryAction = "Cancel",
+		});
+
+		var result = await _dialog.Result;
+
+		if (result.Cancelled)
+		{
+			emailInput.Email = "";
+			emailInput.Errors = null;
+			return;
+		}
+
+		var invitationResult = await InvitationService.InviteUserAsync(new InviteUserRequest
+		{
+			TeamId = TeamContext.TeamId,
+			Email = emailInput.Email
+		}, CTS.Token);
+
+		if (invitationResult.IsFailure)
+		{
+			ToastService.ShowError(invitationResult.Error.Message);
+
+			if (invitationResult.Error is ApiValidationError error)
+			{
+				emailInput.Errors = error.Errors;
+			}
+
+			return;
+		}
+
+		emailInput.Email = "";
+		emailInput.Errors = null;
+
+		ToastService.ShowInfo("The invitation request was accepted for processing, invitation should be created in upcoming minutes.");
+		await LoadInvitationsAsync(true);
+	}
+}

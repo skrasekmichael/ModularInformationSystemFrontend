@@ -1,0 +1,166 @@
+﻿@page "/teams/{teamGuid:guid}"
+@using TeamUp.Client.Pages.Components
+
+@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+@inject IToastService ToastService
+@inject IMessenger Messenger
+@inject TeamService TeamService
+
+<div class="body-small">
+	<div class="d-flex align-center" style="margin-bottom: 16px">
+		<h1 class="d-flex no-margin padding-small">@(team?.Name ?? "Team")</h1>
+		<FluentButton Appearance="Appearance.Outline" OnClick="() => LoadTeamAsync(true)" Style="margin-top: 4px">
+			<span class="icon">&#59180;</span>
+		</FluentButton>
+	</div>
+	@if (team is not null)
+	{
+		<TeamContext Team="team" TeamGuid="TeamGuid" Context="teamContext">
+			<FluentCard Class="margin-sym">
+				<div class="d-flex flex-dir-row align-center">
+					<div>
+						Nickname:
+						<strong style="margin-left: 4px;">@teamContext.Nickname</strong>
+					</div>
+					<FluentButton IconStart="@(new Icons.Filled.Size20.Edit())" Appearance="Appearance.Outline" Style="margin-left: 8px;" />
+				</div>
+				<div>
+					Role:
+					<strong style="margin-left: 4px;">@teamContext.Role.ToString()</strong>
+				</div>
+
+				<FluentDivider Style="margin-top: 8px; margin-bottom: 8px" />
+
+				@if (teamContext.Role.IsOwner())
+				{
+					<div style="margin-top: 8px">
+						<FluentButton IconStart="@(new Icons.Filled.Size20.Delete())" Appearance="Appearance.Accent" OnClick="@DeleteAsync">Delete Team</FluentButton>
+					</div>
+				}
+				else
+				{
+					<div style="margin-top: 8px">
+						<FluentButton Appearance="Appearance.Accent" OnClick="() => LeaveTeamAsync(teamContext.Member!.Id)">Leave Team</FluentButton>
+					</div>
+				}
+			</FluentCard>
+
+			<FluentCard Class="margin-sym">
+				<h4 class="padding-small no-margin" style="margin-left: 3px">Members</h4>
+				<FluentDataGrid Items="@(team.Members.AsQueryable())" >
+					<PropertyColumn Property="@(p => p.Nickname)" Title="Nickname" Class="content-center" />
+					<PropertyColumn Property="@(p => p.Role.ToString())" Title="Team Role" Class="content-center" />
+					@if (teamContext.Role.CanRemoveTeamMembers())
+					{
+						<TemplateColumn Title="Action" Class="content-center">
+							<FluentButton IconStart="@(new Icons.Filled.Size20.Delete())" Appearance="Appearance.Accent" OnClick="() => RemoveTeamMemberAsync(context)" />
+						</TemplateColumn>
+					}
+				</FluentDataGrid>
+			</FluentCard>
+
+			@if (teamContext.Role.CanInviteTeamMembers())
+			{
+				<FluentCard Class="margin-sym">
+					<TeamInvitationsComponent />
+				</FluentCard>
+			}
+		</TeamContext>
+	}
+</div>
+
+@code
+{
+	[Parameter]
+	public Guid TeamGuid { get; init; } = default!;
+
+	private TeamResponse? team = null;
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadTeamAsync();
+	}
+
+	private async Task LoadTeamAsync(bool forceLoad = false)
+	{
+		var teamResult = await TeamService.GetTeamAsync(TeamId.FromGuid(TeamGuid), forceLoad, CTS.Token);
+		if (teamResult.IsSuccess)
+		{
+			team = teamResult.Value;
+		}
+		else
+		{
+			ToastService.ShowError(teamResult.Error.Message);
+			NavigationManager.NavigateTo("/events");
+		}
+	}
+
+	public async Task DeleteAsync()
+	{
+		var confirm = await DialogService.ShowConfirmationAsync("Do you want to delete the team?", "Yes", "No");
+		if ((await confirm.Result).Cancelled == true)
+		{
+			return;
+		}
+
+		var teamId = TeamId.FromGuid(TeamGuid);
+		var result = await TeamService.DeleteTeamAsync(teamId, CTS.Token);
+		if (result.IsFailure)
+		{
+			ToastService.ShowError(result.Error.Message);
+			return;
+		}
+
+		ToastService.ShowSuccess("Team has been successfully deleted.");
+		NavigationManager.NavigateTo("/events");
+	}
+
+	public async Task LeaveTeamAsync(TeamMemberId memberId)
+	{
+		var confirm = await DialogService.ShowConfirmationAsync("Do you want to leave the team?", "Yes", "No");
+		if ((await confirm.Result).Cancelled == true)
+		{
+			return;
+		}
+
+		var teamId = TeamId.FromGuid(TeamGuid);
+		var result = await TeamService.RemoveTeamMemberAsync(teamId, memberId, CTS.Token);
+		if (result.IsFailure)
+		{
+			ToastService.ShowError(result.Error.Message);
+			return;
+		}
+
+		ToastService.ShowSuccess($"You have left the {team!.Name}.");
+		Messenger.Send(new TeamDeletedMessage
+		{
+			TeamId = teamId
+		});
+		NavigationManager.NavigateTo("/events");
+	}
+
+	public async Task RemoveTeamMemberAsync(TeamMemberResponse member)
+	{
+		var confirm = await DialogService.ShowConfirmationAsync($"Do you want to remove {member.Nickname} from the team?", "Yes", "No");
+		if ((await confirm.Result).Cancelled == true)
+		{
+			return;
+		}
+
+		var teamId = TeamId.FromGuid(TeamGuid);
+		var result = await TeamService.RemoveTeamMemberAsync(teamId, member.Id, CTS.Token);
+		if (result.IsFailure)
+		{
+			ToastService.ShowError(result.Error.Message);
+			return;
+		}
+
+		ToastService.ShowWarning($"{member.Nickname} has been removed from the team.");
+		await LoadTeamAsync();
+	}
+}

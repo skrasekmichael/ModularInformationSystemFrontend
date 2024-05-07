@@ -1,6 +1,0 @@
-[submodule "Backend/ModularMonolith"]
-	path = Backend/ModularMonolith
-	url = git@github.com:skrasekmichael/ModularMonolith.git
-[submodule "Backend/CleanArchitecture"]
-	path = Backend/CleanArchitecture
-	url = git@github.com:skrasekmichael/CleanArchitecture.git
