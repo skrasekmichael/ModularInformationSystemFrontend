@@ -30,9 +30,7 @@
 					<div class="d-flex align-center" style="margin: 2px">
 						<span>Teams</span>
 						<FluentSpacer />
-						<FluentButton Appearance="Appearance.Outline" OnClick="() => LoadTeamsAsync(true)" Style="margin-left: 4px; height: 29px">
-							<span class="icon-small">&#59180;</span>
-						</FluentButton>
+						<FluentButton IconStart="@(new Icons.Regular.Size16.ArrowClockwise())" Appearance="Appearance.Outline" OnClick="() => LoadTeamsAsync(true)" Style="margin-left: 4px;" />
 					</div>
 				</TitleTemplate>
 				<ChildContent>

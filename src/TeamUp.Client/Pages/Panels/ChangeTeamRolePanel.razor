@@ -1,0 +1,18 @@
+﻿@implements IDialogContentComponent<ChangeTeamRoleInput>
+
+@using System.ComponentModel.DataAnnotations
+
+<FluentDialogBody>
+	<span class="padding-small">@Content.TargetMember</span>
+	<FluentSelect Items="@roles" OptionText="@(role => Enum.GetName<TeamRole>(role))" @bind-SelectedOption="@Content.Role" />
+</FluentDialogBody>
+
+@code
+{
+	private List<TeamRole> roles = Enum.GetValues<TeamRole>()
+		.Except([TeamRole.Owner])
+		.ToList();
+
+	[Parameter]
+	public ChangeTeamRoleInput Content { get; set; } = default!;
+}

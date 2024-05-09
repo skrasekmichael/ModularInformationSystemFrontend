@@ -1,5 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.Messaging;
 
+using Microsoft.Extensions.Logging;
+
 using RailwayResult;
 using RailwayResult.FunctionalExtensions;
 
@@ -15,12 +17,14 @@ public sealed class TeamService
 	private readonly ApiClient _client;
 	private readonly IMessenger _messenger;
 	private readonly CacheFacade _cache;
+	private readonly IAuthService _authService;
 
-	public TeamService(ApiClient client, IMessenger messenger, CacheFacade cache)
+	public TeamService(ApiClient client, IMessenger messenger, CacheFacade cache, IAuthService authService)
 	{
 		_client = client;
 		_messenger = messenger;
 		_cache = cache;
+		_authService = authService;
 
 		messenger.Register<TeamService, TeamDeletedMessage>(this, async (self, msg) =>
 		{
@@ -79,7 +83,7 @@ public sealed class TeamService
 		var result = await _client.RemoveTeamMemberAsync(teamId, memberId, ct);
 		return await result.TapAsync(async () =>
 		{
-			await _cache.UpdateAsync<TeamResponse>($"team-{teamId.Value}", team =>
+			var team = await _cache.UpdateAsync<TeamResponse>($"team-{teamId.Value}", team =>
 			{
 				var toRemove = team.Members.Find(member => member.Id == memberId);
 				if (toRemove is not null)
@@ -87,11 +91,102 @@ public sealed class TeamService
 					team.Members.Remove(toRemove);
 				}
 			}, ct);
+
+			if (team is not null)
+			{
+				_messenger.Send(new TeamDataUpdatedMessage
+				{
+					TeamId = teamId,
+					Team = team
+				});
+			}
 		});
 	}
 
 	public Task<Result<TeamResponse>> GetTeamAsync(TeamId teamId, bool forceFetch, CancellationToken ct)
 	{
 		return _cache.GetAsync($"team-{teamId.Value}", () => _client.GetTeamAsync(teamId, ct), TimeSpan.FromMinutes(10), forceFetch, ct);
+	}
+
+	public async Task<Result> ChangeNicknameAsync(TeamId teamId, ChangeNicknameRequest request, CancellationToken ct)
+	{
+		var result = await _client.ChangeNicknameAsync(teamId, request, ct);
+		return await result.TapAsync(async () =>
+		{
+			var userId = await _authService.GetUserIdAsync();
+			var team = await _cache.UpdateAsync<TeamResponse>($"team-{teamId.Value}", team =>
+			{
+				var toUpdate = team.Members.Find(member => member.UserId == userId);
+				if (toUpdate is not null)
+				{
+					toUpdate.Nickname = request.Nickname;
+				}
+			}, ct);
+
+			if (team is not null)
+			{
+				_messenger.Send(new TeamDataUpdatedMessage
+				{
+					TeamId = teamId,
+					Team = team
+				});
+			}
+		});
+	}
+
+	public async Task<Result> ChangeTeamRoleAsync(TeamId teamId, TeamMemberId memberId, UpdateTeamRoleRequest request, CancellationToken ct)
+	{
+		var result = await _client.UpdaterTeamRoleAsync(teamId, memberId, request, ct);
+		return await result.TapAsync(async () =>
+		{
+			var team = await _cache.UpdateAsync<TeamResponse>($"team-{teamId.Value}", team =>
+			{
+				var toUpdate = team.Members.Find(member => member.Id == memberId);
+				if (toUpdate is not null)
+				{
+					toUpdate.Role = request.Role;
+				}
+			}, ct);
+
+			if (team is not null)
+			{
+				_messenger.Send(new TeamDataUpdatedMessage
+				{
+					TeamId = teamId,
+					Team = team
+				});
+			}
+		});
+	}
+
+	public async Task<Result> ChangeOwnershipAsync(TeamId teamId, TeamMemberId newOwnerId, CancellationToken ct)
+	{
+		var result = await _client.ChangeOwnershipAsync(teamId, newOwnerId, ct);
+		return await result.TapAsync(async () =>
+		{
+			var team = await _cache.UpdateAsync<TeamResponse>($"team-{teamId.Value}", team =>
+			{
+				var originalOwner = team.Members.Find(member => member.Role.IsOwner());
+				if (originalOwner is not null)
+				{
+					originalOwner.Role = TeamRole.Admin;
+				}
+
+				var newOwner = team.Members.Find(member => member.Id == newOwnerId);
+				if (newOwner is not null)
+				{
+					newOwner.Role = TeamRole.Owner;
+				}
+			}, ct);
+
+			if (team is not null)
+			{
+				_messenger.Send(new TeamDataUpdatedMessage
+				{
+					TeamId = teamId,
+					Team = team
+				});
+			}
+		});
 	}
 }

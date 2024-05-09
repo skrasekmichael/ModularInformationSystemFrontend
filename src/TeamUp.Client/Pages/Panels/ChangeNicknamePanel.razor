@@ -1,0 +1,27 @@
+﻿@implements IDialogContentComponent<ChangeNicknameInput>
+
+@using System.ComponentModel.DataAnnotations
+
+<FluentDialogBody>
+	<EditForm Model="@Content" Style="margin: 1px">
+		<CustomValidation @ref="ValidationComponent" />
+		<FluentTextField @bind-Value="@Content.Nickname" Required="true" Placeholder="nickname" Label="Nickname" />
+		<FluentValidationMessage For="() => Content.Nickname" Class="text-danger" />
+	</EditForm>
+</FluentDialogBody>
+
+@code
+{
+	[Parameter]
+	public ChangeNicknameInput Content { get; set; } = default!;
+
+	private CustomValidation ValidationComponent { get; set; } = null!;
+
+	protected override void OnAfterRender(bool firstRender)
+	{
+		if (Content?.Errors is not null)
+		{
+			ValidationComponent.DisplayErrors(Content.Errors);
+		}
+	}
+}

@@ -1,0 +1,30 @@
+﻿@implements IDialogContentComponent<ChangeOwnershipInput>
+
+@using System.ComponentModel.DataAnnotations
+
+<FluentDialogBody>
+	<FluentAutocomplete TOption="TeamMemberResponse"
+						AutoComplete="on"
+						Autofocus="true"
+						Label="Select new owner"
+						Placeholder="Select member"
+						OnOptionsSearch="@OnSearchAsync"
+						MaximumSelectedOptions="1"
+						OptionText="@(item => item.Nickname)"
+						@bind-SelectedOptions="Content.SelectedMember" />
+</FluentDialogBody>
+
+@code
+{
+	[Parameter]
+	public ChangeOwnershipInput Content { get; set; } = default!;
+
+	private Task OnSearchAsync(OptionsSearchEventArgs<TeamMemberResponse> eventArgs)
+	{
+		eventArgs.Items = Content.Members
+			.Where(member => member.Nickname.StartsWith(eventArgs.Text, StringComparison.OrdinalIgnoreCase))
+			.OrderBy(member => member.Nickname);
+
+		return Task.CompletedTask;
+	}
+}

@@ -1,0 +1,175 @@
+﻿@using TeamUp.Client.Pages.Panels
+
+@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+@inject IToastService ToastService
+@inject IMessenger Messenger
+@inject TeamService TeamService
+
+<div class="d-flex flex-dir-row align-center">
+	<div>
+		Nickname:
+		<strong style="margin-left: 4px;">@TeamContext.Nickname</strong>
+	</div>
+	<FluentButton IconStart="@(new Icons.Filled.Size20.Edit())" Appearance="Appearance.Outline" OnClick="@ChangeNicknameAsync" Style="margin-left: 8px;" />
+</div>
+<div>
+	Role:
+	<strong style="margin-left: 4px;">@TeamContext.Role.ToString()</strong>
+</div>
+
+<FluentDivider Style="margin-top: 8px; margin-bottom: 8px" />
+
+@if (TeamContext.Role.IsOwner())
+{
+	<FluentStack Style="margin-top: 8px">
+		<FluentButton IconStart="@(new Icons.Filled.Size20.Delete())" Appearance="Appearance.Accent" OnClick="@DeleteTeamAsync">Delete Team</FluentButton>
+		<FluentButton Appearance="Appearance.Accent" OnClick="@ChangeOwnershipAsync">Change Ownership</FluentButton>
+	</FluentStack>
+}
+else
+{
+	<div style="margin-top: 8px">
+		<FluentButton Appearance="Appearance.Accent" OnClick="() => LeaveTeamAsync(TeamContext.Member!.Id)">Leave Team</FluentButton>
+	</div>
+}
+
+@code
+{
+	[CascadingParameter]
+	public TeamContext TeamContext { get; set; } = null!;
+
+	private IDialogReference? dialog;
+
+	private ChangeNicknameInput nicknameInput = new()
+	{
+		Nickname = ""
+	};
+
+	private ChangeOwnershipInput ownershipInput = new();
+
+	public async Task LeaveTeamAsync(TeamMemberId memberId)
+	{
+		var confirm = await DialogService.ShowConfirmationAsync("Do you want to leave the team?", "Yes", "No");
+		if ((await confirm.Result).Cancelled == true)
+		{
+			return;
+		}
+
+		var result = await TeamService.RemoveTeamMemberAsync(TeamContext.TeamId, memberId, CTS.Token);
+		if (result.IsFailure)
+		{
+			ToastService.ShowError(result.Error.Message);
+			return;
+		}
+
+		ToastService.ShowSuccess($"You have left the {TeamContext.Team.Name}.");
+		Messenger.Send(new TeamDeletedMessage
+		{
+			TeamId = TeamContext.TeamId
+		});
+		NavigationManager.NavigateTo("/events");
+	}
+
+
+	public async Task DeleteTeamAsync()
+	{
+		var confirm = await DialogService.ShowConfirmationAsync("Do you want to delete the team?", "Yes", "No");
+		if ((await confirm.Result).Cancelled == true)
+		{
+			return;
+		}
+
+		var result = await TeamService.DeleteTeamAsync(TeamContext.TeamId, CTS.Token);
+		if (result.IsFailure)
+		{
+			ToastService.ShowError(result.Error.Message);
+			return;
+		}
+
+		ToastService.ShowSuccess("Team has been successfully deleted.");
+		NavigationManager.NavigateTo("/events");
+	}
+
+	public async Task ChangeNicknameAsync()
+	{
+		dialog = await DialogService.ShowPanelAsync<ChangeNicknamePanel>(nicknameInput, new DialogParameters<ChangeNicknameInput>()
+		{
+			Content = nicknameInput,
+			Alignment = HorizontalAlignment.Right,
+			Title = $"Change Nickname",
+			PrimaryAction = "Change",
+			SecondaryAction = "Cancel",
+		});
+
+		if ((await dialog.Result).Cancelled)
+		{
+			nicknameInput.Nickname = "";
+			nicknameInput.Errors = null;
+			return;
+		}
+
+		var changeResult = await TeamService.ChangeNicknameAsync(TeamContext.TeamId, new ChangeNicknameRequest
+		{
+			Nickname = nicknameInput.Nickname
+		}, CTS.Token);
+
+		if (changeResult.IsFailure)
+		{
+			ToastService.ShowError(changeResult.Error.Message);
+
+			if (changeResult.Error is ApiValidationError error)
+			{
+				nicknameInput.Errors = error.Errors;
+			}
+
+			return;
+		}
+
+		nicknameInput.Nickname = "";
+		nicknameInput.Errors = null;
+
+		ToastService.ShowSuccess("Nickname has been successfully changed.");
+	}
+
+	public async Task ChangeOwnershipAsync()
+	{
+		ownershipInput.Members = TeamContext.Team.Members;
+
+		dialog = await DialogService.ShowPanelAsync<ChangeOwnershipPanel>(ownershipInput, new DialogParameters<ChangeOwnershipInput>()
+		{
+			Content = ownershipInput,
+			Alignment = HorizontalAlignment.Right,
+			Title = $"Change Nickname",
+			PrimaryAction = "Change",
+			SecondaryAction = "Cancel",
+		});
+
+		if ((await dialog.Result).Cancelled)
+		{
+			ownershipInput.SelectedMember = [];
+			return;
+		}
+
+		if (ownershipInput.SelectedMember.Count() == 0)
+		{
+			ToastService.ShowError("Member has to be selected.");
+			return;
+		}
+
+		var changeResult = await TeamService.ChangeOwnershipAsync(TeamContext.TeamId, ownershipInput.SelectedMember.First().Id, CTS.Token);
+
+		if (changeResult.IsFailure)
+		{
+			ToastService.ShowError(changeResult.Error.Message);
+			return;
+		}
+
+		ownershipInput.SelectedMember = [];
+		ToastService.ShowSuccess("Ownership has been transferred.");
+	}
+}

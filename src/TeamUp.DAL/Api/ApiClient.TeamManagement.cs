@@ -22,6 +22,16 @@ public sealed partial class ApiClient
 	public Task<Result<TeamResponse>> GetTeamAsync(TeamId teamId, CancellationToken ct) =>
 		SendAsync<TeamResponse>(HttpMethod.Get, $"/api/v1/teams/{teamId.Value}", ct);
 
+	public Task<Result> ChangeNicknameAsync(TeamId teamId, ChangeNicknameRequest request, CancellationToken ct) =>
+		SendAsync(HttpMethod.Put, $"/api/v1/teams/{teamId.Value}/nickname", request, ct);
+
+	public Task<Result> UpdaterTeamRoleAsync(TeamId teamId, TeamMemberId memberId, UpdateTeamRoleRequest request, CancellationToken ct) =>
+		SendAsync(HttpMethod.Put, $"/api/v1/teams/{teamId.Value}/members/{memberId.Value}/role", request, ct);
+
+	public Task<Result> ChangeOwnershipAsync(TeamId teamId, TeamMemberId memberId, CancellationToken ct) =>
+		SendAsync(HttpMethod.Put, $"/api/v1/teams/{teamId.Value}/owner", memberId.Value, ct);
+
+
 	public Task<Result<List<InvitationResponse>>> GetMyInvitationsAsync(CancellationToken ct) =>
 		SendAsync<List<InvitationResponse>>(HttpMethod.Get, "/api/v1/invitations", ct);
 

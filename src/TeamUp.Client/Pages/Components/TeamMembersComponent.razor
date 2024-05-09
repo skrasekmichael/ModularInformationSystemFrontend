@@ -1,0 +1,98 @@
+﻿@using TeamUp.Client.Pages.Panels
+
+@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+@inject IToastService ToastService
+@inject IMessenger Messenger
+@inject TeamService TeamService
+
+<h4 class="padding-small no-margin" style="margin-left: 3px">Members</h4>
+<FluentDataGrid Items="@(TeamContext.Team.Members.AsQueryable())">
+	<PropertyColumn Sortable="true" Property="@(p => p.Nickname)" Title="Nickname" Class="content-center" />
+	<PropertyColumn Sortable="true" IsDefaultSortColumn="true" Property="@(p => p.Role.ToString())" Title="Team Role" Class="content-center" />
+	@if (TeamContext.Role.CanRemoveTeamMembers() || TeamContext.Role.CanUpdateTeamRoles())
+	{
+		<TemplateColumn Title="Action" Class="content-center" Align="Align.Center">
+			@if (TeamContext.Role.CanRemoveTeamMembers() && !context.Role.IsOwner())
+			{
+				<FluentButton IconStart="@(new Icons.Filled.Size20.Delete())" Appearance="Appearance.Accent" OnClick="() => RemoveTeamMemberAsync(context)" />
+			}
+
+			@if (TeamContext.Role.CanUpdateTeamRoles() && !context.Role.IsOwner())
+			{
+				<FluentButton IconStart="@(new Icons.Filled.Size20.Edit())" Appearance="Appearance.Accent" OnClick="() => ChangeTeamRoleAsync(context)" />
+			}
+		</TemplateColumn>
+	}
+</FluentDataGrid>
+
+@code
+{
+	[CascadingParameter]
+	public TeamContext TeamContext { get; set; } = null!;
+
+	private IDialogReference? dialog;
+
+	private ChangeTeamRoleInput teamRoleInput = new()
+	{
+		Role = TeamRole.Member
+	};
+
+	public async Task RemoveTeamMemberAsync(TeamMemberResponse member)
+	{
+		var confirm = await DialogService.ShowConfirmationAsync($"Do you want to remove {member.Nickname} from the team?", "Yes", "No");
+		if ((await confirm.Result).Cancelled == true)
+		{
+			return;
+		}
+
+		var result = await TeamService.RemoveTeamMemberAsync(TeamContext.TeamId, member.Id, CTS.Token);
+		if (result.IsFailure)
+		{
+			ToastService.ShowError(result.Error.Message);
+			return;
+		}
+
+		ToastService.ShowWarning($"{member.Nickname} has been removed from the team.");
+	}
+
+	public async Task ChangeTeamRoleAsync(TeamMemberResponse member)
+	{
+		teamRoleInput.Role = member.Role;
+		teamRoleInput.TargetMember = member.Nickname;
+
+		dialog = await DialogService.ShowPanelAsync<ChangeTeamRolePanel>(teamRoleInput, new DialogParameters<ChangeTeamRoleInput>()
+		{
+			Content = teamRoleInput,
+			Alignment = HorizontalAlignment.Right,
+			Title = $"Change Team Role",
+			PrimaryAction = "Change",
+			SecondaryAction = "Cancel",
+		});
+
+		var result = await dialog.Result;
+		if (result.Cancelled)
+		{
+			teamRoleInput.Reset();
+			return;
+		}
+
+		var changeResult = await TeamService.ChangeTeamRoleAsync(TeamContext.TeamId, member.Id, new UpdateTeamRoleRequest
+		{
+			Role = teamRoleInput.Role
+		}, CTS.Token);
+
+		if (changeResult.IsFailure)
+		{
+			ToastService.ShowError(changeResult.Error.Message);
+			return;
+		}
+
+		teamRoleInput.Reset();
+		ToastService.ShowSuccess("Team role has been successfully updated.");
+	}
+}

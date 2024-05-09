@@ -1,8 +1,4 @@
-﻿using System.Security.Claims;
-
-using CommunityToolkit.Mvvm.Messaging;
-
-using Microsoft.AspNetCore.Components.Authorization;
+﻿using CommunityToolkit.Mvvm.Messaging;
 
 using RailwayResult;
 
@@ -17,14 +13,14 @@ public sealed class LoginService
 	private readonly ApiClient _client;
 	private readonly IMessenger _messenger;
 	private readonly ICacheStorage _cacheStorage;
-	private readonly AuthenticationStateProvider _authStateProvider;
+	private readonly IAuthService _authService;
 
-	public LoginService(ApiClient client, IMessenger messenger, ICacheStorage cacheStorage, AuthenticationStateProvider authStateProvider)
+	public LoginService(ApiClient client, IMessenger messenger, ICacheStorage cacheStorage, IAuthService authService)
 	{
 		_client = client;
 		_messenger = messenger;
 		_cacheStorage = cacheStorage;
-		_authStateProvider = authStateProvider;
+		_authService = authService;
 	}
 
 	public Task<Result<string>> LoginAsync(LoginRequest request, CancellationToken ct)
@@ -34,14 +30,13 @@ public sealed class LoginService
 
 	public async Task ValidateCacheAsync(CancellationToken ct)
 	{
-		var state = await _authStateProvider.GetAuthenticationStateAsync();
-		var loggedInUser = new Guid(state.User.Claims.First(claim => claim.Type == ClaimTypes.NameIdentifier).Value);
+		var loggedInUser = await _authService.GetUserIdAsync();
 
 		var cacheOwner = await _cacheStorage.GetRecordAsync<Guid>("cache-owner", ct);
-		if (cacheOwner?.Value != loggedInUser)
+		if (cacheOwner?.Value != loggedInUser.Value)
 		{
 			await _cacheStorage.ClearAsync(ct);
-			await _cacheStorage.SetRecordAsync("cache-owner", new CacheRecord<Guid>(loggedInUser, DateTime.UtcNow.AddYears(1)), ct);
+			await _cacheStorage.SetRecordAsync("cache-owner", new CacheRecord<Guid>(loggedInUser.Value, DateTime.UtcNow.AddYears(1)), ct);
 		}
 	}
 }

@@ -15,16 +15,17 @@ public sealed class CacheFacade
 
 	public ValueTask DeleteAsync(string key, CancellationToken ct) => _cacheStorage.RemoveAsync(key, ct);
 
-	public async ValueTask UpdateAsync<T>(string key, Action<T> update, CancellationToken ct) where T : class
+	public async ValueTask<T?> UpdateAsync<T>(string key, Action<T> update, CancellationToken ct) where T : class
 	{
 		var record = await _cacheStorage.GetRecordAsync<T>(key, ct);
 		if (record is null)
 		{
-			return;
+			return null;
 		}
 
 		update(record.Value);
 		await _cacheStorage.SetRecordAsync(key, record, ct);
+		return record.Value;
 	}
 
 	public async Task<Result<T>> GetAsync<T>(string key, Func<Task<Result<T>>> fetchAsync, TimeSpan lifetime, bool forceFetch, CancellationToken ct)

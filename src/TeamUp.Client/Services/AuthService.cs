@@ -1,8 +1,11 @@
-﻿using BitzArt.Blazor.Cookies;
+﻿using System.Security.Claims;
+
+using BitzArt.Blazor.Cookies;
 
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 
+using TeamUp.Contracts.Users;
 using TeamUp.DAL;
 
 namespace TeamUp.Client.Services;
@@ -24,6 +27,13 @@ public sealed class AuthService : IAuthService
 	{
 		var cookie = await _cookieService.GetAsync("JWT");
 		return cookie?.Value;
+	}
+
+	public async Task<UserId> GetUserIdAsync()
+	{
+		var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
+		var guid = new Guid(state.User.Claims.First(claim => claim.Type == ClaimTypes.NameIdentifier).Value);
+		return UserId.FromGuid(guid);
 	}
 
 	public async Task LogoutAsync(string url = "/login", CancellationToken ct = default)

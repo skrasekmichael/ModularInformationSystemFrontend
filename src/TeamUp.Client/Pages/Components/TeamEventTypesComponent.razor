@@ -1,0 +1,22 @@
+﻿@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+<h4 class="padding-small no-margin" style="margin-left: 3px">Event Types</h4>
+<FluentDataGrid Items="@(TeamContext.Team.EventTypes.AsQueryable())">
+	<PropertyColumn IsDefaultSortColumn="true" Property="@(p => p.Name)" Title="Name" Class="content-center" />
+	<PropertyColumn Property="@(p => p.Description)" Title="Description" Class="content-center" />
+	@if (TeamContext.Role.CanManipulateEventTypes())
+	{
+		<TemplateColumn Title="Action" Class="content-center" Align="Align.Center">
+			<FluentButton IconStart="@(new Icons.Filled.Size20.Delete())" Appearance="Appearance.Accent" />
+			<FluentButton IconStart="@(new Icons.Filled.Size20.Edit())" Appearance="Appearance.Accent" />
+		</TemplateColumn>
+	}
+</FluentDataGrid>
+
+@code
+{
+	[CascadingParameter]
+	public TeamContext TeamContext { get; set; } = null!;
+}

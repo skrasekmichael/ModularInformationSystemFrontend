@@ -1,8 +1,8 @@
-﻿@rendermode InteractiveAuto
+﻿@using TeamUp.Client.Pages.Panels
+
+@rendermode InteractiveAuto
 
 @inherits CancellableComponent
-
-@using TeamUp.Client.Pages.Panels
 
 @inject IToastService ToastService
 @inject IDialogService DialogService
@@ -10,9 +10,7 @@
 
 <div class="d-flex align-center w-100" style="margin-left: 3px">
 	<h4 class="padding-small no-margin">Invitations</h4>
-	<FluentButton Appearance="Appearance.Outline" OnClick="() => LoadInvitationsAsync(true)">
-		<span class="icon">&#59180;</span>
-	</FluentButton>
+	<FluentButton IconStart="@(new Icons.Regular.Size20.ArrowClockwise())" Appearance="Appearance.Outline" OnClick="() => LoadInvitationsAsync(true)" />
 	<FluentSpacer />
 	<FluentButton Appearance="Appearance.Accent" OnClick="InviteUserAsync">Invite User</FluentButton>
 </div>
@@ -34,7 +32,7 @@
 
 	private List<TeamInvitationResponse>? invitations;
 
-	private IDialogReference? _dialog;
+	private IDialogReference? dialog;
 
 	private EmailInput emailInput = new()
 	{
@@ -81,7 +79,7 @@
 
 	public async Task InviteUserAsync()
 	{
-		_dialog = await DialogService.ShowPanelAsync<InviteUserPanel>(emailInput, new DialogParameters<EmailInput>()
+		dialog = await DialogService.ShowPanelAsync<InviteUserPanel>(emailInput, new DialogParameters<EmailInput>()
 		{
 			Content = emailInput,
 			Alignment = HorizontalAlignment.Right,
@@ -90,7 +88,7 @@
 			SecondaryAction = "Cancel",
 		});
 
-		var result = await _dialog.Result;
+		var result = await dialog.Result;
 
 		if (result.Cancelled)
 		{
