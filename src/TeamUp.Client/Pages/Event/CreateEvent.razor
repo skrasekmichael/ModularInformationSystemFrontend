@@ -15,8 +15,21 @@
 <PageTitle>Create Event</PageTitle>
 
 <div Class="body-small h-auto padding-large">
-	<h1 style="margin-bottom: 16px">Create Team</h1>
+	<h1 style="margin-bottom: 16px">Create Event</h1>
+	
 	<FluentDivider />
+	
+	<FluentBreadcrumb Class="padding-small">
+		<FluentBreadcrumbItem Href="@($"/teams/{TeamGuid}")">
+			Team
+		</FluentBreadcrumbItem>
+		<FluentBreadcrumbItem>
+			Cerate Event
+		</FluentBreadcrumbItem>
+	</FluentBreadcrumb>
+
+	<FluentDivider />
+
 	<EditForm Model="@Input" OnValidSubmit="CreateEventAsync" FormName="CreateEventForm" Style="margin-top: 16px">
 		<CustomValidation @ref="ValidationComponent" />
 

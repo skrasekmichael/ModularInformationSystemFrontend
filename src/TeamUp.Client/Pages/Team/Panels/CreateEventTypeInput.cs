@@ -2,7 +2,7 @@
 
 namespace TeamUp.Client.Pages.Team.Panels;
 
-public class CreateEventTypeInput
+public sealed class CreateEventTypeInput
 {
 	[Required]
 	public required string Name { get; set; }

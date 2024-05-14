@@ -46,6 +46,9 @@ public sealed partial class ApiClient
 	public Task<Result<EventId>> CreateEventAsync(TeamId teamId, CreateEventRequest request, CancellationToken ct) =>
 		SendAsync<CreateEventRequest, EventId>(HttpMethod.Post, $"/api/v1/teams/{teamId.Value}/events", request, ct);
 
+	public Task<Result> UpsertEventReply(TeamId teamId, EventId eventId, UpsertEventReplyRequest request, CancellationToken ct) =>
+		SendAsync(HttpMethod.Put, $"/api/v1/teams/{teamId.Value}/events/{eventId.Value}", request, ct);
+
 
 	public Task<Result<List<InvitationResponse>>> GetMyInvitationsAsync(CancellationToken ct) =>
 		SendAsync<List<InvitationResponse>>(HttpMethod.Get, "/api/v1/invitations", ct);

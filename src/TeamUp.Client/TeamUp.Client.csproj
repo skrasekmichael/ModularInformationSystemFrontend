@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Pages\Event\Components\EventsComponent.razor~RF2fe7900b.TMP" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="BitzArt.Blazor.Cookies.Client" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" />

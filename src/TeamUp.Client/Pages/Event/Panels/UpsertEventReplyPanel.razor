@@ -1,0 +1,41 @@
+﻿@rendermode InteractiveAuto
+
+@implements IDialogContentComponent<UpsertEventReplyInput>
+
+<FluentDialogBody>
+	<EditForm Model="@Content" Style="margin: 1px">
+		<CustomValidation @ref="ValidationComponent" />
+		<FluentCombobox TOption="ReplyType?" Items="ReplyTypes" Multiple="false" Required="true" Label="Response"
+						@bind-SelectedOption="Content.ReplyType"/>
+		<FluentValidationMessage For="() => Content.ReplyType" Class="text-danger" />
+
+		@if (Content.ReplyType != ReplyType.Yes)
+		{
+			<FluentTextField @bind-Value="Content.Message" Placeholder="message" Label="Message"
+							 Required="Content.ReplyType == ReplyType.No" />
+			<FluentValidationMessage For="() => Content.Message" Class="text-danger" />
+		}
+		else
+		{
+			Content.Message = "";
+		}
+	</EditForm>
+</FluentDialogBody>
+
+@code
+{
+	private static readonly ReplyType?[] ReplyTypes = Enum.GetValues<ReplyType>().Select<ReplyType, ReplyType?>(x => x).ToArray();
+
+	[Parameter]
+	public UpsertEventReplyInput Content { get; set; } = default!;
+
+	private CustomValidation ValidationComponent { get; set; } = null!;
+
+	protected override void OnAfterRender(bool firstRender)
+	{
+		if (Content?.Errors is not null)
+		{
+			ValidationComponent.DisplayErrors(Content.Errors);
+		}
+	}
+}

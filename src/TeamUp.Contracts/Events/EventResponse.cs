@@ -12,5 +12,5 @@ public sealed class EventResponse
 	public required EventStatus Status { get; init; }
 	public required TimeSpan MeetTime { get; init; }
 	public required TimeSpan ReplyClosingTimeBeforeMeetTime { get; init; }
-	public required IReadOnlyList<EventResponseResponse> EventResponses { get; init; }
+	public required List<EventResponseResponse> EventResponses { get; init; }
 }

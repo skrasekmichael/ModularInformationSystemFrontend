@@ -2,7 +2,7 @@
 
 namespace TeamUp.Client.Pages.Team.Panels;
 
-public class ChangeOwnershipInput
+public sealed class ChangeOwnershipInput
 {
 	public IEnumerable<TeamMemberResponse> SelectedMember { get; set; } = Array.Empty<TeamMemberResponse>();
 

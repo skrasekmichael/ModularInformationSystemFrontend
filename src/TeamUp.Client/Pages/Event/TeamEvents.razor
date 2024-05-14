@@ -1,4 +1,4 @@
-﻿@page "/teams/{teamGuid:guid}"
+﻿@page "/teams/{teamGuid:guid}/events"
 
 @rendermode InteractiveAuto
 
@@ -11,35 +11,29 @@
 
 <div>
 	<div class="d-flex align-center" style="margin-bottom: 16px">
-		<h1 class="d-flex no-margin padding-small">@(team?.Name ?? "Team")</h1>
-		<FluentButton IconStart="@(new Icons.Regular.Size20.ArrowClockwise())" Appearance="Appearance.Outline" OnClick="() => LoadTeamAsync(true)" Style="margin-top: 4px" />
+		<h1 class="d-flex no-margin padding-small">@($"{team?.Name} Events" ?? "Team Events")</h1>
 	</div>
+
+	<FluentDivider />
+
+	<FluentBreadcrumb Class="padding-small">
+		<FluentBreadcrumbItem Href="@($"/teams/{TeamGuid}")">
+			@(team?.Name ?? "Team")
+		</FluentBreadcrumbItem>
+		<FluentBreadcrumbItem>
+			Events
+		</FluentBreadcrumbItem>
+	</FluentBreadcrumb>
+
+	<FluentDivider />
 
 	@if (team is not null)
 	{
 		<TeamContext Team="team" TeamGuid="TeamGuid" Context="teamContext">
-			<div class="d-flex">
-				<div class="d-flex flex-dir-column">
-					<FluentCard Class="margin-sym">
-						<TeamManagementComponent />
-					</FluentCard>
-
-					<FluentCard Class="margin-sym">
-						<TeamEventTypesComponent />
-					</FluentCard>
-
-					@if (teamContext.Role.CanInviteTeamMembers())
-					{
-						<FluentCard Class="margin-sym">
-							<TeamInvitationsComponent />
-						</FluentCard>
-					}
-				</div>
-				<div style="margin-left: 8px">
-					<FluentCard Class="margin-sym">
-						<TeamMembersComponent />
-					</FluentCard>
-				</div>
+			<div style="margin-left: 8px">
+				<FluentCard Class="margin-sym">
+					<TeamUp.Client.Pages.Event.Components.EventsComponent TeamId="teamContext.TeamId" />
+				</FluentCard>
 			</div>
 		</TeamContext>
 	}
@@ -54,7 +48,7 @@
 
 	protected override async Task OnInitializedAsync()
 	{
-		Messenger.Register<Team, TeamDataUpdatedMessage>(this, (self, message) =>
+		Messenger.Register<TeamEvents, TeamDataUpdatedMessage>(this, (self, message) =>
 		{
 			if (message.TeamId.Value == TeamGuid)
 			{

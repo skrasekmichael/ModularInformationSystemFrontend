@@ -23,20 +23,22 @@
 <FluentDivider Style="margin-top: 8px; margin-bottom: 8px" />
 
 <FluentStack Style="margin-top: 8px">
-@if (TeamContext.Role.IsOwner())
-{
-	<FluentButton IconStart="@(new Icons.Filled.Size20.Delete())" Appearance="Appearance.Accent" OnClick="@DeleteTeamAsync">Delete Team</FluentButton>
-	<FluentButton Appearance="Appearance.Accent" OnClick="@ChangeOwnershipAsync">Change Ownership</FluentButton>
-}
-else
-{
-	<FluentButton Appearance="Appearance.Accent" OnClick="() => LeaveTeamAsync(TeamContext.Member!.Id)">Leave Team</FluentButton>
-}
+	@if (TeamContext.Role.IsOwner())
+	{
+		<FluentButton IconStart="@(new Icons.Filled.Size20.Delete())" Appearance="Appearance.Accent" OnClick="@DeleteTeamAsync">Delete Team</FluentButton>
+		<FluentButton Appearance="Appearance.Accent" OnClick="@ChangeOwnershipAsync">Change Ownership</FluentButton>
+	}
+	else
+	{
+		<FluentButton Appearance="Appearance.Accent" OnClick="() => LeaveTeamAsync(TeamContext.Member!.Id)">Leave Team</FluentButton>
+	}
 
-@if (TeamContext.Role.CanManipulateEvents())
-{
-	<FluentAnchor Appearance="Appearance.Accent" Href="@($"/teams/{TeamContext.TeamGuid}/events/create")">Create Event</FluentAnchor>
-}
+	@if (TeamContext.Role.CanManipulateEvents())
+	{
+		<FluentAnchor Appearance="Appearance.Accent" Href="@($"/teams/{TeamContext.TeamGuid}/events/create")">Create Event</FluentAnchor>
+	}
+
+	<FluentAnchor Appearance="Appearance.Accent" Href="@($"/teams/{TeamContext.TeamGuid}/events")">Events</FluentAnchor>
 </FluentStack>
 
 @code
