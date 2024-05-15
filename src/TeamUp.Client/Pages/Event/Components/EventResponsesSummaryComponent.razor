@@ -1,7 +1,7 @@
 ﻿<div class="reply-count-summary @($"reply-count-distinct-{ReplyCount.Count + (UndefinedCount > 0 ? 1 : 0)}")">
 	@if (UndefinedCount > 0)
 	{
-		<div class="reply-type reply-type-undefined" tooltip="No Response">
+		<div class="reply-type reply-type-undefined" tooltip="No Response">
 			@(UndefinedCount)
 		</div>
 	}

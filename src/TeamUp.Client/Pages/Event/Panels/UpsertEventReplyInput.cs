@@ -14,6 +14,7 @@ public class UpsertEventReplyInput
 
 	public void Reset()
 	{
+		Event = null;
 		ReplyType = null;
 		Message = "";
 		Errors = null;

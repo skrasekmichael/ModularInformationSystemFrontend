@@ -1,9 +1,12 @@
-﻿using CommunityToolkit.Mvvm.Messaging;
+﻿using System.Security.Claims;
+
+using CommunityToolkit.Mvvm.Messaging;
 
 using RailwayResult;
 using RailwayResult.FunctionalExtensions;
 
 using TeamUp.Contracts.Teams;
+using TeamUp.Contracts.Users;
 using TeamUp.DAL.Api;
 using TeamUp.DAL.Cache;
 using TeamUp.DAL.Messages;
@@ -215,6 +218,18 @@ public sealed class TeamService
 					Team = team
 				});
 			}
+		});
+	}
+
+	public async Task<Result<TeamMemberResponse>> GetCurrentMember(TeamId teamId, bool forceFetch, CancellationToken ct)
+	{
+		var userId = await _authService.GetUserIdAsync();
+		var teamResult = await GetTeamAsync(teamId, forceFetch, ct);
+		return teamResult.Then(team =>
+		{
+			return team.Members
+				.Find(member => member.UserId == userId)
+				.EnsureNotNull(new DataAccessError("Team.CurrentMember.NotFound", "Current member not found."));
 		});
 	}
 }

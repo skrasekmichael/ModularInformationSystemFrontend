@@ -1,0 +1,165 @@
+﻿@page "/teams/{teamGuid:guid}/events/{eventGuid:guid}"
+
+@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+@inject NavigationManager NavigationManager
+@inject IToastService ToastService
+@inject IMessenger Messenger
+@inject EventService EventService
+@inject TeamService TeamService
+
+<div>
+	<div class="d-flex align-center" style="margin-bottom: 16px">
+		<h1 class="d-flex no-margin padding-small">@($"{Event?.Description}" ?? "Event")</h1>
+		<FluentButton IconStart="@(new Icons.Regular.Size20.ArrowClockwise())" Appearance="Appearance.Outline" OnClick="() => LoadDataAsync(true)" Style="margin-top: 4px" />
+	</div>
+
+	<FluentDivider />
+
+	@if (Team is null || Event is null)
+	{
+		<FluentProgressRing />
+	}
+	else
+	{
+		<TeamContext Team="Team" TeamGuid="TeamGuid" Context="teamContext">
+			<FluentBreadcrumb Class="padding-small">
+				<FluentBreadcrumbItem Href="@($"/teams/{TeamGuid}")">
+					@(teamContext.Team.Name)
+				</FluentBreadcrumbItem>
+				<FluentBreadcrumbItem Href="@($"/teams/{TeamGuid}/events")">
+					Events
+				</FluentBreadcrumbItem>
+				<FluentBreadcrumbItem>
+					@(Event.Description)
+				</FluentBreadcrumbItem>
+			</FluentBreadcrumb>
+
+			<FluentDivider />
+
+			<FluentCard Class="margin-sym d-flex flex-dir-column" Style="overflow: unset">
+				<h4 style="margin-left: 8px" class="no-padding no-margin">Event Details</h4>
+				<div class="d-flex">
+					<div class="padding-small lh-details">
+						<div>Event Type: @(Event.EventType)</div>
+						<div>Description: @(Event.Description)</div>
+						<div>Time: @(Event.FromUtc.ToLocalTime().ToString("D")); @(Event.FromUtc.ToString("HH\\:mm"))-@(Event.ToUtc.ToString("HH\\:mm")) (@((Event.ToUtc - Event.FromUtc).TotalHours) h)</div>
+					</div>
+					<div class="padding-small lh-details">
+						<div>Meet Time: @((Event.FromUtc.ToLocalTime() - Event.MeetTime).ToString("HH\\:mm")) (@Event.MeetTime.TotalMinutes min before the event)</div>
+						<div>Reply Closing Time: @((Event.FromUtc.ToLocalTime() - Event.MeetTime - Event.ReplyClosingTimeBeforeMeetTime).ToString("HH\\:mm")) (@((Event.MeetTime + Event.ReplyClosingTimeBeforeMeetTime).TotalMinutes) min before the event)</div>
+						<div class="d-flex align-center">
+							<div>Response Summary:</div>
+							<div style="margin-left: 16px">
+								<EventResponsesSummaryComponent ReplyCount="ReplyCounts" TeamCount="teamContext.Team.Members.Count" />
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<h4 class="padding-small no-margin">Responses</h4>
+				<FluentDataGrid Items="@(Event.EventResponses.AsQueryable())" ResizableColumns="true">
+					<TemplateColumn Title="Member" Class="content-center">
+						@(context.TeamMemberNickname) <span class="secondary">(@(Team?.Members.Find(m => m.Id == context.TeamMemberId)?.Role))</span>
+					</TemplateColumn>
+					<PropertyColumn Property="@(p => p.Type.ToString())" Title="Response" Class="content-center" />
+					<PropertyColumn Property="@(p => p.Message)" Title="Message" Class="content-center" />
+					<TemplateColumn Title="Action">
+						@if (context.TeamMemberId == teamContext.Member?.Id)
+						{
+							<EventReplyButton EventResponse="GetSlimResponse(context)" TeamId="teamContext.TeamId" Member="teamContext.Member" />
+						}
+					</TemplateColumn>
+				</FluentDataGrid>
+			</FluentCard>
+		</TeamContext>
+	}
+</div>
+
+@code
+{
+	[Parameter]
+	public Guid TeamGuid { get; init; } = default!;
+
+	[Parameter]
+	public Guid EventGuid { get; init; } = default!;
+
+	private TeamResponse? Team { get; set; } = null;
+	private EventResponse? Event { get; set; } = null;
+	private List<ReplyCountResponse>? ReplyCounts { get; set; } = null;
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadDataAsync();
+
+		Messenger.Register<EventPage, EventUpdatedMessage>(this, (self, message) =>
+		{
+			var targetResponse = self.Event?.EventResponses.FirstOrDefault(e => e.TeamMemberId == message.Event.InitiatorResponse?.TeamMemberId);
+			if (targetResponse is not null)
+			{
+				targetResponse.Message = message.Event.InitiatorResponse!.Message;
+				targetResponse.Type = message.Event.InitiatorResponse!.Type;
+				self.ReplyCounts = GetReplyCounts(self.Event!);
+				self.StateHasChanged();
+			}
+		});
+	}
+
+	public async Task LoadDataAsync(bool forceLoad = false)
+	{
+		var teamId = TeamId.FromGuid(TeamGuid);
+		var teamResult = await TeamService.GetTeamAsync(teamId, false, CTS.Token);
+		if (teamResult.IsSuccess)
+		{
+			Team = teamResult.Value;
+		}
+		else
+		{
+			ToastService.ShowError(teamResult.Error.Message);
+		}
+
+		var eventId = EventId.FromGuid(EventGuid);
+		var eventResult = await EventService.GetEventAsync(teamId, eventId, false, CTS.Token);
+		if (eventResult.IsSuccess)
+		{
+			Event = eventResult.Value;
+			ReplyCounts = GetReplyCounts(Event);
+		}
+		else
+		{
+			ToastService.ShowError(eventResult.Error.Message);
+		}
+	}
+
+	private List<ReplyCountResponse> GetReplyCounts(EventResponse eventData)
+	{
+		return eventData.EventResponses
+			.GroupBy(er => er.Type)
+			.OrderBy(er => er.Key)
+			.Select(x => new ReplyCountResponse
+			{
+				Type = x.Key,
+				Count = x.Count(),
+			})
+			.ToList();
+	}
+
+	private EventSlimResponse GetSlimResponse(EventResponseResponse response)
+	{
+		return new EventSlimResponse
+		{
+			Id = EventId.FromGuid(EventGuid),
+			Description = Event!.Description,
+			EventType = Event.EventType,
+			FromUtc = Event.FromUtc,
+			ToUtc = Event.ToUtc,
+			InitiatorResponse = response,
+			MeetTime = Event.MeetTime,
+			ReplyClosingTimeBeforeMeetTime = Event.ReplyClosingTimeBeforeMeetTime,
+			ReplyCount = ReplyCounts!,
+			Status = Event.Status,
+		};
+	}
+}

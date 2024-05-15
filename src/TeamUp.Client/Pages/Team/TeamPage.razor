@@ -54,12 +54,12 @@
 
 	protected override async Task OnInitializedAsync()
 	{
-		Messenger.Register<Team, TeamDataUpdatedMessage>(this, (self, message) =>
+		Messenger.Register<TeamPage, TeamDataUpdatedMessage>(this, (self, message) =>
 		{
-			if (message.TeamId.Value == TeamGuid)
+			if (message.TeamId.Value == self.TeamGuid)
 			{
-				team = message.Team;
-				StateHasChanged();
+				self.team = message.Team;
+				self.StateHasChanged();
 			}
 		});
 

@@ -1,0 +1,90 @@
+﻿@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+@inject IToastService ToastService
+@inject IDialogService DialogService
+@inject EventService EventService
+
+<FluentButton Appearance="Appearance.Accent" Disabled="@CanReply()" IconStart="@(new Icons.Filled.Size20.Chat())" OnClick="() => ReplyAsync(EventResponse)" />
+
+@code
+{
+	[Parameter]
+	[EditorRequired]
+	public required EventSlimResponse EventResponse { get; set; }
+
+	[Parameter]
+	[EditorRequired]
+	public required TeamId TeamId { get; set; }
+
+	[Parameter]
+	[EditorRequired]
+	public required TeamMemberResponse Member { get; set; }
+
+	private IDialogReference? dialog;
+
+	private UpsertEventReplyInput replyInput = new();
+
+	public bool CanReply()
+	{
+		var closingTime = (EventResponse.FromUtc - EventResponse.MeetTime - EventResponse.ReplyClosingTimeBeforeMeetTime);
+		return DateTime.UtcNow >= closingTime;
+	}
+
+	public async Task ReplyAsync(EventSlimResponse eventResponse)
+	{
+		if (replyInput.Event != eventResponse)
+		{
+			replyInput.ReplyType = eventResponse.InitiatorResponse?.Type;
+			replyInput.Message = eventResponse.InitiatorResponse?.Message ?? "";
+			replyInput.Event = eventResponse;
+			replyInput.Errors = null;
+		}
+
+		dialog = await DialogService.ShowPanelAsync<UpsertEventReplyPanel>(replyInput, new DialogParameters<UpsertEventReplyInput>()
+		{
+			Content = replyInput,
+			Alignment = HorizontalAlignment.Right,
+			Title = eventResponse.Description,
+			PrimaryAction = "Reply",
+			SecondaryAction = "Cancel",
+		});
+
+		var result = await dialog.Result;
+
+		if (result.Cancelled)
+		{
+			replyInput.Reset();
+			return;
+		}
+
+		if (replyInput.ReplyType is null)
+		{
+			ToastService.ShowError("Response is required.");
+			replyInput.Reset();
+			return;
+		}
+
+		var invitationResult = await EventService.UpsertEventReplyAsync(TeamId, eventResponse.Id, Member, new UpsertEventReplyRequest
+		{
+			ReplyType = replyInput.ReplyType.Value,
+			Message = replyInput.Message,
+		}, CTS.Token);
+
+		if (invitationResult.IsFailure)
+		{
+			ToastService.ShowError(invitationResult.Error.Message);
+
+			if (invitationResult.Error is ApiValidationError error)
+			{
+				replyInput.Errors = error.Errors;
+			}
+
+			return;
+		}
+
+		replyInput.Reset();
+		ToastService.ShowSuccess("Your have replied to the event.");
+	}
+}

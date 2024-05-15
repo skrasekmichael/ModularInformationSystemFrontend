@@ -162,8 +162,8 @@ public sealed class EventService
 
 				targetEvent.InitiatorResponse = initiatorResponse;
 			}, ct);
-			var slimResponse = slimResponses?.Find(e => e.Id == eventId);
 
+			var slimResponse = slimResponses?.Find(e => e.Id == eventId);
 			if (slimResponse is not null)
 			{
 				_messenger.Send(new EventUpdatedMessage

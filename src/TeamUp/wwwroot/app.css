@@ -198,6 +198,10 @@ code {
 	max-width: 550px;
 }
 
+.lh-details {
+	line-height: 27px;
+}
+
 .font-large {
 	font-size: large;
 }
@@ -310,6 +314,10 @@ code {
 	bottom: 0;
 }
 
+.secondary {
+	color: var(--info);
+}
+
 
 .reply-count-summary {
 	max-width: 110px;
@@ -389,4 +397,7 @@ code {
 	z-index: 5;
 	visibility: hidden;
 	pointer-events: none;
+
+	-webkit-backdrop-filter: blur(2px);
+	backdrop-filter: blur(2px);
 }

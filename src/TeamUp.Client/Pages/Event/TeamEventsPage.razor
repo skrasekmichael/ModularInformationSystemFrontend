@@ -32,7 +32,7 @@
 		<TeamContext Team="team" TeamGuid="TeamGuid" Context="teamContext">
 			<div style="margin-left: 8px">
 				<FluentCard Class="margin-sym">
-					<TeamUp.Client.Pages.Event.Components.EventsComponent TeamId="teamContext.TeamId" />
+					<EventsComponent />
 				</FluentCard>
 			</div>
 		</TeamContext>
@@ -48,12 +48,12 @@
 
 	protected override async Task OnInitializedAsync()
 	{
-		Messenger.Register<TeamEvents, TeamDataUpdatedMessage>(this, (self, message) =>
+		Messenger.Register<TeamEventsPage, TeamDataUpdatedMessage>(this, (self, message) =>
 		{
-			if (message.TeamId.Value == TeamGuid)
+			if (message.TeamId.Value == self.TeamGuid)
 			{
-				team = message.Team;
-				StateHasChanged();
+				self.team = message.Team;
+				self.StateHasChanged();
 			}
 		});
 

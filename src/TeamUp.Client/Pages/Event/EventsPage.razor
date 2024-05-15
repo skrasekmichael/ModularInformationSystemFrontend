@@ -1,0 +1,119 @@
+﻿@page "/events"
+@using System.Runtime.CompilerServices
+
+@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+@inject TeamService TeamService
+@inject EventService EventService
+@inject IMessenger Messenger
+
+<div>
+	<div class="d-flex align-center" style="margin-bottom: 16px">
+		<h1 class="d-flex no-margin padding-small">Events</h1>
+		<FluentButton IconStart="@(new Icons.Regular.Size20.ArrowClockwise())" Appearance="Appearance.Outline" OnClick="() => LoadDataAsync(true)" Style="margin-top: 4px" />
+	</div>
+
+	@if (Teams is not null)
+	{
+		<FluentStack Orientation="Orientation.Horizontal">
+			@foreach (var team in Teams)
+			{
+				<FluentCheckbox Label="@team.Name" Value="TeamFilter[team.TeamId]" ValueChanged="e => TeamFilter[team.TeamId] = e"/>
+			}
+		</FluentStack>
+	}
+
+	@if (Events is not null)
+	{
+		<FluentDataGrid Items="@EventsFiltered" ResizableColumns="true">
+			<PropertyColumn Property="@(p => p.Team.Name)" Sortable="true" Title="Team Name" Class="content-center" />
+			<PropertyColumn Property="@(p => p.Event.EventType)" Title="Event Type" Class="content-center" />
+			<PropertyColumn Property="@(p => p.Event.Description)" Title="Description" Class="content-center" />
+			<PropertyColumn Property="@(p => p.Event.FromUtc.ToLocalTime())" Format="dd.MM HH:mm" Sortable="true" IsDefaultSortColumn="true" Title="From" Class="content-center" />
+			<PropertyColumn Property="@(p => p.Event.ToUtc.ToLocalTime())" Format="HH:mm" Title="To" Class="content-center" />
+			<PropertyColumn Property="@(p => p.Event.InitiatorResponse == null ? "-" : p.Event.InitiatorResponse.Type.ToString())" Align="Align.Center" Title="Your Response" Class="content-center" />
+			<TemplateColumn Title="Responses" Align="Align.Center" Style="overflow: unset">
+				<EventResponsesSummaryComponent ReplyCount="context.Event.ReplyCount" TeamCount="0" />
+			</TemplateColumn>
+			<TemplateColumn Title="Action" Class="content-center" Align="Align.Center">
+				<FluentAnchor Appearance="Appearance.Outline" IconStart="@(new Icons.Filled.Size20.Search())" Href="@($"/teams/{context.Team.TeamId.Value}/events/{context.Event.Id.Value}")" />
+				<EventReplyButton EventResponse="context.Event" TeamId="context.Team.TeamId" Member="context.Member" />
+			</TemplateColumn>
+		</FluentDataGrid>
+	}
+</div>
+
+@code
+{
+	private List<TeamSlimResponse>? Teams { get; set; }
+	private List<EventRecord>? Events { get; set; }
+
+	private Dictionary<TeamId, bool> TeamFilter { get; set; } = new();
+	private IQueryable<EventRecord>? EventsFiltered =>
+		Events?.AsQueryable().Where(e => TeamFilter.GetValueOrDefault(e.Team.TeamId));
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadDataAsync(false);
+
+		Messenger.Register<EventsPage, EventUpdatedMessage>(this, (self, message) =>
+		{
+			var targetEvent = self.Events?.FirstOrDefault(e => e.Event.Id == message.Event.Id);
+			if (targetEvent is not null)
+			{
+				targetEvent.Event.InitiatorResponse = message.Event.InitiatorResponse;
+				targetEvent.Event.ReplyCount = message.Event.ReplyCount;
+				self.StateHasChanged();
+			}
+		});
+	}
+
+	public async Task LoadDataAsync(bool forceLoad = false)
+	{
+		var teamsResult = await TeamService.GetMyTeamsAsync(forceLoad, CTS.Token);
+		if (teamsResult.IsFailure)
+		{
+			Events = null;
+			return;
+		}
+
+		Teams = teamsResult.Value;
+		Teams.ForEach(team => TeamFilter.TryAdd(team.TeamId, true));
+
+		var events = new List<EventRecord>();
+		await foreach (var teamEvents in GetEventsAsync(Teams, forceLoad, CTS.Token))
+		{
+			events.AddRange(teamEvents);
+		}
+
+		Events = events;
+	}
+
+	private async IAsyncEnumerable<IEnumerable<EventRecord>> GetEventsAsync(List<TeamSlimResponse> teams, bool forceLoad, [EnumeratorCancellation] CancellationToken ct)
+	{
+		foreach (var team in teams)
+		{
+			var memberResult = await TeamService.GetCurrentMember(team.TeamId, forceLoad, ct);
+			var eventResult = await EventService.GetEventsAsync(team.TeamId, forceLoad, ct);
+			
+			if (eventResult.IsSuccess && memberResult.IsSuccess)
+			{
+				yield return eventResult.Value.Select<EventSlimResponse, EventRecord>(e => new EventRecord
+				{
+					Member = memberResult.Value,
+					Team = team,
+					Event = e
+				});
+			}
+		}
+	}
+
+	public sealed class EventRecord
+	{
+		public required TeamMemberResponse Member { get; set; }
+		public required TeamSlimResponse Team { get; set; }
+		public required EventSlimResponse Event { get; set; }
+	}
+}

@@ -16,15 +16,15 @@
 	<FluentDataGrid Items="@(events.AsQueryable())" ResizableColumns="true">
 		<PropertyColumn Property="@(p => p.EventType)" Title="Event Type" Class="content-center" />
 		<PropertyColumn Property="@(p => p.Description)" Title="Description" Class="content-center" />
-		<PropertyColumn Property="@(p => p.FromUtc.ToLocalTime())" Format="dd.MM hh:mm" Sortable="true" IsDefaultSortColumn="true" Title="From" Class="content-center" />
-		<PropertyColumn Property="@(p => p.ToUtc.ToLocalTime())" Format="hh:mm" Title="To" Class="content-center" />
+		<PropertyColumn Property="@(p => p.FromUtc.ToLocalTime())" Format="dd.MM HH:mm" Sortable="true" IsDefaultSortColumn="true" Title="From" Class="content-center" />
+		<PropertyColumn Property="@(p => p.ToUtc.ToLocalTime())" Format="HH:mm" Title="To" Class="content-center" />
 		<PropertyColumn Property="@(p => p.InitiatorResponse == null ? "-" : p.InitiatorResponse.Type.ToString())" Align="Align.Center" Title="Your Response" Class="content-center" />
 		<TemplateColumn Title="Responses" Align="Align.Center" Style="overflow: unset">
 			<EventResponsesSummaryComponent ReplyCount="context.ReplyCount" TeamCount="TeamContext?.Team.Members.Count ?? 0" />
 		</TemplateColumn>
 		<TemplateColumn Title="Action" Class="content-center" Align="Align.Center">
-			<FluentAnchor Appearance="Appearance.Outline" IconStart="@(new Icons.Filled.Size20.Search())" Href="@($"/teams/{TeamId.Value}/events/{context.Id.Value}")" />
-			<FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Filled.Size20.Chat())" OnClick="() => ReplyAsync(context)" />
+			<FluentAnchor Appearance="Appearance.Outline" IconStart="@(new Icons.Filled.Size20.Search())" Href="@($"/teams/{TeamContext.TeamId.Value}/events/{context.Id.Value}")" />
+			<EventReplyButton EventResponse="context" TeamId="TeamContext.TeamId" Member="TeamContext.Member" />
 		</TemplateColumn>
 	</FluentDataGrid>
 }
@@ -33,26 +33,19 @@
 {
 	private List<EventSlimResponse>? events;
 
-	[Parameter]
-	[EditorRequired]
-	public required TeamId TeamId { get; set; }
-
 	[CascadingParameter]
-	public TeamContext? TeamContext { get; set; } = null!;
-
-	private IDialogReference? dialog;
-
-	private UpsertEventReplyInput replyInput = new();
+	public TeamContext TeamContext { get; set; } = null!;
 
 	protected override void OnInitialized()
 	{
 		Messenger.Register<EventsComponent, EventUpdatedMessage>(this, (self, message) =>
 		{
-			var targetEvent = events?.FirstOrDefault(e => e.Id == message.Event.Id);
+			var targetEvent = self.events?.FirstOrDefault(e => e.Id == message.Event.Id);
 			if (targetEvent is not null)
 			{
 				targetEvent.InitiatorResponse = message.Event.InitiatorResponse;
 				targetEvent.ReplyCount = message.Event.ReplyCount;
+				self.StateHasChanged();
 			}
 		});
 	}
@@ -64,7 +57,7 @@
 
 	private async Task LoadEventsAsync(bool forceLoad = false)
 	{
-		var result = await EventService.GetEventsAsync(TeamId, forceLoad, CTS.Token);
+		var result = await EventService.GetEventsAsync(TeamContext.TeamId, forceLoad, CTS.Token);
 		if (result.IsSuccess)
 		{
 			events = result.Value;
@@ -73,61 +66,5 @@
 		{
 			ToastService.ShowError(result.Error.Message);
 		}
-	}
-
-	public async Task ReplyAsync(EventSlimResponse eventResponse)
-	{
-		if (replyInput.Event != eventResponse)
-		{
-			replyInput.ReplyType = eventResponse.InitiatorResponse?.Type;
-			replyInput.Message = eventResponse.InitiatorResponse?.Message ?? "";
-			replyInput.Event = eventResponse;
-			replyInput.Errors = null;
-		}
-
-		dialog = await DialogService.ShowPanelAsync<UpsertEventReplyPanel>(replyInput, new DialogParameters<UpsertEventReplyInput>()
-		{
-			Content = replyInput,
-			Alignment = HorizontalAlignment.Right,
-			Title = eventResponse.Description,
-			PrimaryAction = "Reply",
-			SecondaryAction = "Cancel",
-		});
-
-		var result = await dialog.Result;
-
-		if (result.Cancelled)
-		{
-			replyInput.Reset();
-			return;
-		}
-
-		if (replyInput.ReplyType is null)
-		{
-			ToastService.ShowError("Response is required.");
-			replyInput.Reset();
-			return;
-		}
-
-		var invitationResult = await EventService.UpsertEventReplyAsync(TeamId, eventResponse.Id, TeamContext!.Member!, new UpsertEventReplyRequest
-		{
-			ReplyType = replyInput.ReplyType.Value,
-			Message = replyInput.Message,
-		}, CTS.Token);
-
-		if (invitationResult.IsFailure)
-		{
-			ToastService.ShowError(invitationResult.Error.Message);
-
-			if (invitationResult.Error is ApiValidationError error)
-			{
-				replyInput.Errors = error.Errors;
-			}
-
-			return;
-		}
-
-		replyInput.Reset();
-		ToastService.ShowSuccess("Your have replied to event.");
 	}
 }
