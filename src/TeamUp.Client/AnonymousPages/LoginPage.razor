@@ -12,7 +12,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ICookieService CookieService
 @inject IToastService ToastService
-@inject LoginService LoginService
+@inject AccountService AccountService
 
 <PageTitle>Login</PageTitle>
 
@@ -68,7 +68,7 @@
 	public async Task LoginAsync()
 	{
 		processing = true;
-		var result = await LoginService.LoginAsync(Input, CTS.Token);
+		var result = await AccountService.LoginAsync(Input, CTS.Token);
 		if (result.IsFailure)
 		{
 			if (result.Error is ApiValidationError error)
@@ -86,12 +86,12 @@
 		if (AuthenticationStateProvider is ClientAuthenticationStateProvider persistAuthProvider)
 		{
 			persistAuthProvider.Login(result.Value);
-			await LoginService.ValidateCacheAsync(CTS.Token);
+			await AccountService.ValidateCacheAsync(CTS.Token);
 			Redirect();
 			return;
 		}
 
-		await LoginService.ValidateCacheAsync(CTS.Token);
+		await AccountService.ValidateCacheAsync(CTS.Token);
 		Redirect(true);
 	}
 

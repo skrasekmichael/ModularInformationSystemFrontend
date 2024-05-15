@@ -9,6 +9,7 @@
 @inject ApiClient ApiClient
 @inject IMessenger Messenger
 @inject TeamService TeamService
+@inject AccountService AccountService
 
 <div class="navmenu">
 	<input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
@@ -59,7 +60,7 @@
 			<FluentAnchor Href="logout" Appearance="Appearance.Accent" class="w-90">Logout</FluentAnchor>
 		</div>
 		<div class="text-center" style="margin-top: 4px;">
-			<FluentAnchor Href="logout" Appearance="Appearance.Accent" class="w-90">Clear Cache</FluentAnchor>
+			<FluentButton Href="logout" Appearance="Appearance.Accent" class="w-90" OnClick="ClearCacheAsync">Clear Cache</FluentButton>
 		</div>
 	</nav>
 </div>
@@ -75,6 +76,11 @@
 		Messenger.Register<NavMenu, RefreshTeamsMessage>(this, async (sender, _) => await LoadTeamsAsync(true));
 
 		await LoadTeamsAsync();
+	}
+
+	public async Task ClearCacheAsync()
+	{
+		await AccountService.ClearCacheAsync(CTS.Token);
 	}
 
 	private async Task LoadTeamsAsync(bool forceLoad = false)

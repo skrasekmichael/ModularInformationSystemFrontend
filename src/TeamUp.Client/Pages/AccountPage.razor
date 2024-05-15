@@ -1,8 +1,71 @@
 ﻿@page "/account"
 
-<h3>Account</h3>
+@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+@using System.ComponentModel.DataAnnotations
+@using TeamUp.DAL.Cache
+
+@inject IDialogService DialogService
+@inject IToastService ToastService
+@inject ICacheStorage CacheStorage
+@inject IAuthService AuthService
+@inject ApiClient ApiClient
+
+<PageTitle>Account</PageTitle>
+
+<div class="d-flex align-center" style="margin-bottom: 16px">
+	<h1 class="d-flex no-margin padding-small">Account</h1>
+</div>
+
+<div class="body-small">
+	<FluentCard Class="margin-sym">
+		<EditForm Model="@Input" OnValidSubmit="DeleteAccountAsync" FormName="DeleteAccountForm">
+			<CustomValidation />
+			<FluentStack Orientation="Orientation.Vertical">
+				<FluentTextField @bind-value="Input.Password" Immediate="true" AutoComplete="current-password" Required="true" Placeholder="password" Label="Password" type="password" Class="w-100" />
+				<FluentValidationMessage For="() => Input.Password" Class="text-danger" />
+
+				<FluentStack Orientation="Orientation.Horizontal" Style="margin-top: 8px">
+					<FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Delete</FluentButton>
+				</FluentStack>
+			</FluentStack>
+		</EditForm>
+	</FluentCard>
+</div>
 
 @code
 {
+	[SupplyParameterFromForm]
+	private PasswordModel Input { get; set; } = new();
 
+	public async Task DeleteAccountAsync()
+	{
+		var confirm = await DialogService.ShowConfirmationAsync("Do you want to delete your account?", "Yes", "No");
+		if ((await confirm.Result).Cancelled == true)
+		{
+			Input.Password = "";
+			return;
+		}
+
+		var result = await ApiClient.DeleteAccountAsync(Input.Password, CTS.Token);
+		if (result.IsFailure)
+		{
+			ToastService.ShowError(result.Error.Message);
+			Input.Password = "";
+			return;
+		}
+
+		await CacheStorage.ClearAsync(CTS.Token);
+		await AuthService.LogoutAsync("/login", CTS.Token);
+	}
+
+	private sealed class PasswordModel
+	{
+		[Required]
+		[DataType(DataType.Password)]
+		[Display(Name = "Password")]
+		public string Password { get; set; } = "";
+	}
 }
