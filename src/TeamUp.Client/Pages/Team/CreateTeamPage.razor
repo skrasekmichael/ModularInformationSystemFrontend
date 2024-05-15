@@ -8,9 +8,8 @@
 @using BitzArt.Blazor.Cookies
 
 @inject NavigationManager NavigationManager
-@inject ApiClient ApiClient
 @inject IToastService ToastService
-@inject IMessenger Messenger
+@inject TeamService TeamService
 
 <PageTitle>Create Team</PageTitle>
 
@@ -39,7 +38,7 @@
 
 	public async Task CreateTeamAsync()
 	{
-		var result = await ApiClient.CreateTeamAsync(Input, CTS.Token);
+		var result = await TeamService.CreateTeamAsync(Input, CTS.Token);
 		if (result.IsFailure)
 		{
 			if (result.Error is ApiValidationError error)
@@ -52,11 +51,6 @@
 		}
 
 		ToastService.ShowSuccess("Team has been successfully created.");
-		Messenger.Send(new TeamCreatedMessage
-		{
-			TeamId = result.Value,
-			Name = Input.Name
-		});
 		NavigationManager.NavigateTo($"/teams/{result.Value.Value}");
 	}
 }

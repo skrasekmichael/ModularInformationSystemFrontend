@@ -1,0 +1,70 @@
+﻿@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+@inject IToastService ToastService
+@inject IDialogService DialogService
+@inject IMessenger Messenger
+@inject EventService EventService
+
+<div class="d-flex align-center w-100" style="margin-left: 3px">
+	<h4 class="padding-small no-margin">Upcoming Events</h4>
+	<FluentButton IconStart="@(new Icons.Regular.Size20.ArrowClockwise())" Appearance="Appearance.Outline" OnClick="() => LoadEventsAsync(true)" />
+</div>
+@if (events is not null)
+{
+	<FluentDataGrid Items="@(events.AsQueryable())" ResizableColumns="true">
+		<PropertyColumn Property="@(p => p.EventType)" Title="Event Type" Class="content-center" />
+		<PropertyColumn Property="@(p => p.Description)" Title="Description" Class="content-center" />
+		<PropertyColumn Property="@(p => p.FromUtc.ToLocalTime())" Format="dd.MM HH:mm" Sortable="true" IsDefaultSortColumn="true" Title="From" Class="content-center" />
+		<PropertyColumn Property="@(p => p.ToUtc.ToLocalTime())" Format="HH:mm" Title="To" Class="content-center" />
+		<PropertyColumn Property="@(p => p.InitiatorResponse == null ? "-" : p.InitiatorResponse.Type.ToString())" Align="Align.Center" Title="Your Response" Class="content-center" />
+		<TemplateColumn Title="Responses" Align="Align.Center" Style="overflow: unset">
+			<EventResponsesSummaryComponent ReplyCount="context.ReplyCount" TeamCount="TeamContext?.Team.Members.Count ?? 0" />
+		</TemplateColumn>
+		<TemplateColumn Title="Action" Class="content-center" Align="Align.Center">
+			<FluentAnchor Appearance="Appearance.Outline" IconStart="@(new Icons.Filled.Size20.Search())" Href="@($"/teams/{TeamContext.TeamId.Value}/events/{context.Id.Value}")" />
+			<EventReplyButton EventResponse="context" TeamId="TeamContext.TeamId" Member="TeamContext.Member" />
+		</TemplateColumn>
+	</FluentDataGrid>
+}
+
+@code
+{
+	private List<EventSlimResponse>? events;
+
+	[CascadingParameter]
+	public TeamContext TeamContext { get; set; } = null!;
+
+	protected override void OnInitialized()
+	{
+		Messenger.Register<EventsComponent, EventUpdatedMessage>(this, (self, message) =>
+		{
+			var targetEvent = self.events?.FirstOrDefault(e => e.Id == message.Event.Id);
+			if (targetEvent is not null)
+			{
+				targetEvent.InitiatorResponse = message.Event.InitiatorResponse;
+				targetEvent.ReplyCount = message.Event.ReplyCount;
+				self.StateHasChanged();
+			}
+		});
+	}
+
+	protected override Task OnParametersSetAsync()
+	{
+		return LoadEventsAsync();
+	}
+
+	private async Task LoadEventsAsync(bool forceLoad = false)
+	{
+		var result = await EventService.GetEventsAsync(TeamContext.TeamId, forceLoad, CTS.Token);
+		if (result.IsSuccess)
+		{
+			events = result.Value;
+		}
+		else
+		{
+			ToastService.ShowError(result.Error.Message);
+		}
+	}
+}

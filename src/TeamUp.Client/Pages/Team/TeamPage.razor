@@ -1,8 +1,5 @@
 ﻿@page "/teams/{teamGuid:guid}"
 
-@using TeamUp.Client.Pages.Components
-@using TeamUp.Client.Pages.Panels
-
 @rendermode InteractiveAuto
 
 @inherits CancellableComponent
@@ -12,32 +9,38 @@
 @inject IMessenger Messenger
 @inject TeamService TeamService
 
-<div class="body-small">
+<div>
 	<div class="d-flex align-center" style="margin-bottom: 16px">
 		<h1 class="d-flex no-margin padding-small">@(team?.Name ?? "Team")</h1>
 		<FluentButton IconStart="@(new Icons.Regular.Size20.ArrowClockwise())" Appearance="Appearance.Outline" OnClick="() => LoadTeamAsync(true)" Style="margin-top: 4px" />
 	</div>
+
 	@if (team is not null)
 	{
 		<TeamContext Team="team" TeamGuid="TeamGuid" Context="teamContext">
-			<FluentCard Class="margin-sym">
-				<TeamManagementComponent />
-			</FluentCard>
+			<div class="d-flex">
+				<div class="d-flex flex-dir-column">
+					<FluentCard Class="margin-sym">
+						<TeamManagementComponent />
+					</FluentCard>
 
-			<FluentCard Class="margin-sym">
-				<TeamMembersComponent />
-			</FluentCard>
+					<FluentCard Class="margin-sym">
+						<TeamEventTypesComponent />
+					</FluentCard>
 
-			<FluentCard Class="margin-sym">
-				<TeamEventTypesComponent />
-			</FluentCard>
-
-			@if (teamContext.Role.CanInviteTeamMembers())
-			{
-				<FluentCard Class="margin-sym">
-					<TeamInvitationsComponent />
-				</FluentCard>
-			}
+					@if (teamContext.Role.CanInviteTeamMembers())
+					{
+						<FluentCard Class="margin-sym">
+							<TeamInvitationsComponent />
+						</FluentCard>
+					}
+				</div>
+				<div style="margin-left: 8px">
+					<FluentCard Class="margin-sym">
+						<TeamMembersComponent />
+					</FluentCard>
+				</div>
+			</div>
 		</TeamContext>
 	}
 </div>
@@ -51,12 +54,12 @@
 
 	protected override async Task OnInitializedAsync()
 	{
-		Messenger.Register<Team, TeamDataUpdatedMessage>(this, (self, message) =>
+		Messenger.Register<TeamPage, TeamDataUpdatedMessage>(this, (self, message) =>
 		{
-			if (message.TeamId.Value == TeamGuid)
+			if (message.TeamId.Value == self.TeamGuid)
 			{
-				team = message.Team;
-				StateHasChanged();
+				self.team = message.Team;
+				self.StateHasChanged();
 			}
 		});
 

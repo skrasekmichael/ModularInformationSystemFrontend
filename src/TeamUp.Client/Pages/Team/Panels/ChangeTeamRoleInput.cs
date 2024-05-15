@@ -2,7 +2,7 @@
 
 using TeamUp.Contracts.Teams;
 
-namespace TeamUp.Client.Pages.Panels;
+namespace TeamUp.Client.Pages.Team.Panels;
 
 public sealed class ChangeTeamRoleInput
 {

@@ -1,0 +1,154 @@
+﻿@page "/teams/{teamGuid:guid}/events/create"
+
+@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+@using System.Text.Json
+@using BitzArt.Blazor.Cookies
+
+@inject NavigationManager NavigationManager
+@inject IToastService ToastService
+@inject EventService EventService
+@inject TeamService TeamService
+
+<PageTitle>Create Event</PageTitle>
+
+<div Class="body-small h-auto padding-large">
+	<h1 style="margin-bottom: 16px">Create Event</h1>
+	
+	<FluentDivider />
+	
+	<FluentBreadcrumb Class="padding-small">
+		<FluentBreadcrumbItem Href="@($"/teams/{TeamGuid}")">
+			Team
+		</FluentBreadcrumbItem>
+		<FluentBreadcrumbItem>
+			Cerate Event
+		</FluentBreadcrumbItem>
+	</FluentBreadcrumb>
+
+	<FluentDivider />
+
+	<EditForm Model="@Input" OnValidSubmit="CreateEventAsync" FormName="CreateEventForm" Style="margin-top: 16px">
+		<CustomValidation @ref="ValidationComponent" />
+
+		<FluentStack Orientation="Orientation.Vertical">
+			<FluentCombobox TOption="EventTypeResponse" Items="EventTypes" Label="Event Type" Multiple="false" OptionText="x => x.Name"
+							OptionValue="x => x.Id.Value.ToString()" SelectedOptionChanged="@(e => Input.EventTypeId = e.Id)" Required="true" />
+
+			<FluentTextField @bind-value="Input.Description" Immediate="true" Required="true" Placeholder="description" Label="Event Description" Class="w-100" />
+			<FluentValidationMessage For="() => Input.Description" Class="text-danger" />
+
+			<div>
+				<FluentDatePicker Value="Input.FromUtc.Date" ValueChanged="@(e => Input.FromUtc = e!.Value.AddTicks(Input.FromUtc.TimeOfDay.Ticks))" Label="From" Required="true" />
+				<FluentTimePicker Value="Input.FromUtc" ValueChanged="@(e => Input.FromUtc = Input.FromUtc.Date.AddTicks(e!.Value.TimeOfDay.Ticks))" Required="true" />
+			</div>
+			<FluentValidationMessage For="() => Input.FromUtc" Class="text-danger" />
+
+			<FluentTabs Class="w-100" @bind-ActiveTabId="eventDurationMethod">
+				<FluentTab Label="@($"Event Duration ({(int)(Input.ToUtc - Input.FromUtc).TotalMinutes} minutes)")" Id="tab-timespan" DeferredLoading="true">
+					<FluentSlider Orientation="Orientation.Horizontal" Min="60" Max="180" Step="15" TValue="double" Style="margin-top: 16px; margin-bottom: 32px"
+								  Value="@((int)(Input.ToUtc - Input.FromUtc).TotalMinutes)" ValueChanged="@(e => Input.ToUtc = Input.FromUtc.AddMinutes(e))">
+
+						<FluentSliderLabel Position="60">1 h</FluentSliderLabel>
+						<FluentSliderLabel Position="90">1.5 h</FluentSliderLabel>
+						<FluentSliderLabel Position="120">2 h</FluentSliderLabel>
+						<FluentSliderLabel Position="150">2.5 h</FluentSliderLabel>
+						<FluentSliderLabel Position="180">3 h</FluentSliderLabel>
+					</FluentSlider>
+				</FluentTab>
+				<FluentTab Label="@($"To ({Input.ToUtc.ToLocalTime()})")" Id="tab-datetime" DeferredLoading="true">
+					<div>
+						<FluentDatePicker Value="Input.ToUtc.Date" ValueChanged="@(e => Input.ToUtc = e!.Value.AddTicks(Input.ToUtc.TimeOfDay.Ticks))" />
+						<FluentTimePicker Value="Input.ToUtc" ValueChanged="@(e => Input.ToUtc = Input.ToUtc.Date.AddTicks(e!.Value.TimeOfDay.Ticks))" />
+					</div>
+					<FluentValidationMessage For="() => Input.ToUtc" Class="text-danger" />
+				</FluentTab>
+			</FluentTabs>
+
+
+			<FluentSlider Orientation="Orientation.Horizontal" Label="@($"Meet Time: {(Input.FromUtc - Input.MeetTime).TimeOfDay.ToString("hh\\:mm\\:ss")} ({Input.MeetTime.TotalMinutes} minutes before the event)")"
+						  Min="0" Max="180" Step="5" TValue="double" Style="margin-bottom: 32px"
+						  Value="@(Input.MeetTime.TotalMinutes)" ValueChanged="@(e => Input.MeetTime = TimeSpan.FromMinutes(e))">
+
+				<FluentSliderLabel Position="0">0 m</FluentSliderLabel>
+				<FluentSliderLabel Position="15">15 m</FluentSliderLabel>
+				<FluentSliderLabel Position="30">30 m</FluentSliderLabel>
+				<FluentSliderLabel Position="60">1 h</FluentSliderLabel>
+				<FluentSliderLabel Position="120">2 h</FluentSliderLabel>
+				<FluentSliderLabel Position="180">3 h</FluentSliderLabel>
+			</FluentSlider>
+			<FluentValidationMessage For="() => Input.MeetTime" Class="text-danger" />
+
+			<FluentSlider Orientation="Orientation.Horizontal" Label="@($"Reply Close Time: {(Input.FromUtc - Input.MeetTime - Input.ReplyClosingTimeBeforeMeetTime).TimeOfDay.ToString("hh\\:mm\\:ss")} ({Input.ReplyClosingTimeBeforeMeetTime.TotalMinutes} minutes before meet time)")"
+						  Min="0" Max="180" Step="5" TValue="double" Style="margin-bottom: 32px"
+						  Value="@(Input.ReplyClosingTimeBeforeMeetTime.TotalMinutes)"
+						  ValueChanged="@(e => Input.ReplyClosingTimeBeforeMeetTime = TimeSpan.FromMinutes(e))">
+					
+				<FluentSliderLabel Position="0">0 m</FluentSliderLabel>
+				<FluentSliderLabel Position="15">15 m</FluentSliderLabel>
+				<FluentSliderLabel Position="30">30 m</FluentSliderLabel>
+				<FluentSliderLabel Position="60">1 h</FluentSliderLabel>
+				<FluentSliderLabel Position="120">2 h</FluentSliderLabel>
+				<FluentSliderLabel Position="180">3 h</FluentSliderLabel>
+			</FluentSlider>
+			<FluentValidationMessage For="() => Input.ReplyClosingTimeBeforeMeetTime" Class="text-danger" />
+
+			<FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="margin-top: 8px">Create</FluentButton>
+		</FluentStack>
+	</EditForm>
+</div>
+
+@code
+{
+	private string eventDurationMethod = "tab-timespan";
+
+	[Parameter]
+	public Guid TeamGuid { get; init; } = default!;
+
+	[SupplyParameterFromForm]
+	private CreateEventRequest Input { get; set; } = new()
+	{
+		Description = "",
+		EventTypeId = null!,
+		FromUtc = DateTime.Now,
+		ToUtc = DateTime.Now.AddHours(1),
+		MeetTime = TimeSpan.FromMinutes(15),
+		ReplyClosingTimeBeforeMeetTime = TimeSpan.FromMinutes(15),
+	};
+
+	private List<EventTypeResponse>? EventTypes = null;
+
+	private CustomValidation ValidationComponent { get; set; } = null!;
+
+	protected override async Task OnInitializedAsync()
+	{
+		var teamId = TeamId.FromGuid(TeamGuid);
+		var teamResult = await TeamService.GetEventTypesAsync(teamId, false, CTS.Token);
+		if (teamResult.IsSuccess)
+		{
+			EventTypes = teamResult.Value;
+		}
+	}
+
+	public async Task CreateEventAsync()
+	{
+		var teamId = TeamId.FromGuid(TeamGuid);
+
+		var result = await EventService.CreateEventAsync(teamId, Input, CTS.Token);
+		if (result.IsFailure)
+		{
+			if (result.Error is ApiValidationError error)
+			{
+				ValidationComponent.DisplayErrors(error.Errors);
+			}
+
+			ToastService.ShowError(result.Error.Message);
+			return;
+		}
+
+		ToastService.ShowSuccess("Event has been successfully created.");
+		NavigationManager.NavigateTo($"/teams/{teamId.Value}/events/{result.Value.Value}");
+	}
+}

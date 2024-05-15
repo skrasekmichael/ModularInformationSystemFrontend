@@ -1,0 +1,76 @@
+﻿@page "/teams/{teamGuid:guid}/events"
+
+@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+@inject NavigationManager NavigationManager
+@inject IToastService ToastService
+@inject IMessenger Messenger
+@inject TeamService TeamService
+
+<div>
+	<div class="d-flex align-center" style="margin-bottom: 16px">
+		<h1 class="d-flex no-margin padding-small">@($"{team?.Name} Events" ?? "Team Events")</h1>
+	</div>
+
+	<FluentDivider />
+
+	<FluentBreadcrumb Class="padding-small">
+		<FluentBreadcrumbItem Href="@($"/teams/{TeamGuid}")">
+			@(team?.Name ?? "Team")
+		</FluentBreadcrumbItem>
+		<FluentBreadcrumbItem>
+			Events
+		</FluentBreadcrumbItem>
+	</FluentBreadcrumb>
+
+	<FluentDivider />
+
+	@if (team is not null)
+	{
+		<TeamContext Team="team" TeamGuid="TeamGuid" Context="teamContext">
+			<div style="margin-left: 8px">
+				<FluentCard Class="margin-sym">
+					<EventsComponent />
+				</FluentCard>
+			</div>
+		</TeamContext>
+	}
+</div>
+
+@code
+{
+	[Parameter]
+	public Guid TeamGuid { get; init; } = default!;
+
+	private TeamResponse? team = null;
+
+	protected override async Task OnInitializedAsync()
+	{
+		Messenger.Register<TeamEventsPage, TeamDataUpdatedMessage>(this, (self, message) =>
+		{
+			if (message.TeamId.Value == self.TeamGuid)
+			{
+				self.team = message.Team;
+				self.StateHasChanged();
+			}
+		});
+
+		await LoadTeamAsync();
+	}
+
+	private async Task LoadTeamAsync(bool forceLoad = false)
+	{
+		var teamResult = await TeamService.GetTeamAsync(TeamId.FromGuid(TeamGuid), forceLoad, CTS.Token);
+		if (teamResult.IsSuccess)
+		{
+			team = teamResult.Value;
+		}
+		else
+		{
+			ToastService.ShowError(teamResult.Error.Message);
+			NavigationManager.NavigateTo("/events");
+		}
+	}
+}

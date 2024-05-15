@@ -20,7 +20,7 @@
 {
 	<FluentDataGrid Loading="loading" Items="@(invitations.AsQueryable())">
 		<PropertyColumn Property="@(p => p.TeamName)" Title="Team Name" Class="content-center" />
-		<PropertyColumn Property="@(p => p.CreatedUtc)" Title="Created At" Class="content-center" />
+		<PropertyColumn Property="@(p => p.CreatedUtc.ToLocalTime())" Format="dd.MM. HH:mm" Title="Created At" Class="content-center" />
 		<TemplateColumn Title="Action" Align="Align.Center" Class="content-center">
 			<FluentButton Appearance="Appearance.Accent" OnClick="@(() => AcceptInvitationAsync(context))">Accept</FluentButton>
 			<FluentButton Appearance="Appearance.Outline" OnClick="@(() => DeclineInvitationAsync(context))">Decline</FluentButton>

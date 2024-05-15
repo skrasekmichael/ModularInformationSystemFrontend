@@ -1,5 +1,6 @@
 ﻿using RailwayResult;
 
+using TeamUp.Contracts.Events;
 using TeamUp.Contracts.Invitations;
 using TeamUp.Contracts.Teams;
 
@@ -28,8 +29,25 @@ public sealed partial class ApiClient
 	public Task<Result> UpdaterTeamRoleAsync(TeamId teamId, TeamMemberId memberId, UpdateTeamRoleRequest request, CancellationToken ct) =>
 		SendAsync(HttpMethod.Put, $"/api/v1/teams/{teamId.Value}/members/{memberId.Value}/role", request, ct);
 
+	public Task<Result<EventTypeId>> CreateEventTypeAsync(TeamId teamId, UpsertEventTypeRequest request, CancellationToken ct) =>
+		SendAsync<UpsertEventTypeRequest, EventTypeId>(HttpMethod.Post, $"/api/v1/teams/{teamId.Value}/event-types", request, ct);
+
+
 	public Task<Result> ChangeOwnershipAsync(TeamId teamId, TeamMemberId memberId, CancellationToken ct) =>
 		SendAsync(HttpMethod.Put, $"/api/v1/teams/{teamId.Value}/owner", memberId.Value, ct);
+
+
+	public Task<Result<List<EventSlimResponse>>> GetEventsAsync(TeamId teamId, CancellationToken ct) =>
+		SendAsync<List<EventSlimResponse>>(HttpMethod.Get, $"/api/v1/teams/{teamId.Value}/events", ct);
+
+	public Task<Result<EventResponse>> GetEventAsync(TeamId teamId, EventId eventId, CancellationToken ct) =>
+		SendAsync<EventResponse>(HttpMethod.Get, $"/api/v1/teams/{teamId.Value}/events/{eventId.Value}", ct);
+
+	public Task<Result<EventId>> CreateEventAsync(TeamId teamId, CreateEventRequest request, CancellationToken ct) =>
+		SendAsync<CreateEventRequest, EventId>(HttpMethod.Post, $"/api/v1/teams/{teamId.Value}/events", request, ct);
+
+	public Task<Result> UpsertEventReply(TeamId teamId, EventId eventId, UpsertEventReplyRequest request, CancellationToken ct) =>
+		SendAsync(HttpMethod.Put, $"/api/v1/teams/{teamId.Value}/events/{eventId.Value}", request, ct);
 
 
 	public Task<Result<List<InvitationResponse>>> GetMyInvitationsAsync(CancellationToken ct) =>

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace TeamUp.Client.Pages.Panels;
+namespace TeamUp.Client.Pages.Team.Panels;
 
 public sealed class ChangeNicknameInput
 {

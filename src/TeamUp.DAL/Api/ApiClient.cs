@@ -81,7 +81,7 @@ public sealed partial class ApiClient
 	}
 
 	private Task<Result> SendAsync<TRequest>(HttpMethod method, string uri, TRequest payload, CancellationToken ct) =>
-		SendAsync<TRequest>(method, uri, payload, null, ct);
+		SendAsync(method, uri, payload, null, ct);
 
 	private async Task<Result> SendAsync<TRequest>(HttpMethod method, string uri, TRequest? payload, Action<HttpRequestMessage>? configure, CancellationToken ct)
 	{

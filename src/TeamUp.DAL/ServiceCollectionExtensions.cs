@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
 
 		services
 			.AddScoped<TeamService>()
+			.AddScoped<EventService>()
 			.AddScoped<InvitationsService>()
 			.AddScoped<LoginService>();
 	}

@@ -24,7 +24,7 @@
 				<FluentDivider />
 			</Authorized>
 		</AuthorizeView>
-		<FluentNavMenu Id="main-menu" Width="250" Collapsible="false" Title="Navigation menu">
+		<FluentNavMenu Id="main-menu" Width="220" Collapsible="false" Title="Navigation menu">
 			<FluentNavGroup Expanded="@(teams is not null)" Icon="@(new Icons.Regular.Size20.PeopleTeam())" IconColor="Color.Accent">
 				<TitleTemplate>
 					<div class="d-flex align-center" style="margin: 2px">
@@ -57,6 +57,9 @@
 		</FluentNavMenu>
 		<div class="text-center">
 			<FluentAnchor Href="logout" Appearance="Appearance.Accent" class="w-90">Logout</FluentAnchor>
+		</div>
+		<div class="text-center" style="margin-top: 4px;">
+			<FluentAnchor Href="logout" Appearance="Appearance.Accent" class="w-90">Clear Cache</FluentAnchor>
 		</div>
 	</nav>
 </div>

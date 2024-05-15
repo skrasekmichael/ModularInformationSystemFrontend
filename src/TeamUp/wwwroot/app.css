@@ -198,6 +198,10 @@ code {
 	max-width: 550px;
 }
 
+.lh-details {
+	line-height: 27px;
+}
+
 .font-large {
 	font-size: large;
 }
@@ -308,4 +312,92 @@ code {
 
 .bottom-0 {
 	bottom: 0;
+}
+
+.secondary {
+	color: var(--info);
+}
+
+
+.reply-count-summary {
+	max-width: 110px;
+	float: left;
+	position: relative;
+}
+
+.reply-count-distinct-1 .reply-type, .reply-count-distinct-2 .reply-type, .reply-count-distinct-3 .reply-type {
+	margin-right: 0.5px;
+	margin-left: 0.5px;
+}
+
+.reply-count-distinct-4 .reply-type {
+	margin-right: -2px;
+	margin-left: -2px;
+}
+
+.reply-count-distinct-5 .reply-type {
+	margin-right: -4px;
+	margin-left: -4px;
+}
+
+.reply-type {
+	width: 30px;
+	height: 30px;
+	border-radius: 100%;
+	line-height: 30px;
+	text-align: center;
+	float: right;
+	position: relative;
+}
+
+.reply-type-0 {
+	background: crimson;
+}
+
+.reply-type-1 {
+	background-color: gold;
+}
+
+.reply-type-2 {
+	background-color: lightgreen;
+}
+
+.reply-type-3 {
+	background-color: greenyellow;
+}
+
+.reply-type-undefined {
+	background: silver;
+}
+
+
+[tooltip] {
+	position: relative;
+	display: inline-block;
+	z-index: 1;
+}
+
+[tooltip]:hover::after {
+	visibility: visible;
+}
+
+[tooltip]::after {
+	position: absolute;
+	max-width: 100px;
+	text-align: center;
+	padding: 0 7px;
+	height: fit-content;
+	border-radius: 6px;
+	background: rgba(0, 0, 0, 0.6);
+	color: white;
+	bottom: calc(100% + 5px);
+	margin: auto;
+	left: 0;
+	content: attr(tooltip);
+	z-index: 5;
+	visibility: hidden;
+	pointer-events: none;
+
+	-webkit-backdrop-filter: blur(2px);
+	backdrop-filter: blur(2px);
 }

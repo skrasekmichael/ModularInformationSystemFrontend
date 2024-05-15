@@ -1,4 +1,4 @@
-﻿@implements IDialogContentComponent<EmailInput>
+﻿@implements IDialogContentComponent<InviteUserInput>
 
 @using System.ComponentModel.DataAnnotations
 
@@ -13,7 +13,7 @@
 @code
 {
 	[Parameter]
-	public EmailInput Content { get; set; } = default!;
+	public InviteUserInput Content { get; set; } = default!;
 
 	private CustomValidation ValidationComponent { get; set; } = null!;
 

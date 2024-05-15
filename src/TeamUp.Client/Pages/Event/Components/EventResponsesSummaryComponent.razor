@@ -1,0 +1,33 @@
+﻿<div class="reply-count-summary @($"reply-count-distinct-{ReplyCount.Count + (UndefinedCount > 0 ? 1 : 0)}")">
+	@if (UndefinedCount > 0)
+	{
+		<div class="reply-type reply-type-undefined" tooltip="No Response">
+			@(UndefinedCount)
+		</div>
+	}
+
+	@foreach (var replyCountResponse in ReplyCount)
+	{
+		<div class="reply-type reply-type-@((int)replyCountResponse.Type)" tooltip="@(replyCountResponse.Type.ToString())">
+			@(replyCountResponse.Count)
+		</div>
+	}
+</div>
+
+@code
+{
+	[Parameter]
+	[EditorRequired]
+	public required List<ReplyCountResponse> ReplyCount { get; set; }
+
+	[Parameter]
+	[EditorRequired]
+	public required int TeamCount { get; set; }
+
+	public int UndefinedCount { get; set; } 
+
+	protected override void OnParametersSet()
+	{
+		UndefinedCount = TeamCount - ReplyCount.Sum(x => x.Count);
+	}
+}

@@ -1,6 +1,4 @@
-﻿@using TeamUp.Client.Pages.Panels
-
-@rendermode InteractiveAuto
+﻿@rendermode InteractiveAuto
 
 @inherits CancellableComponent
 
@@ -10,7 +8,7 @@
 @inject IMessenger Messenger
 @inject TeamService TeamService
 
-<h4 class="padding-small no-margin" style="margin-left: 3px">Members</h4>
+<h4 class="padding-small no-margin" style="margin-left: 3px">Members (@(TeamContext.Team.Members.Count))</h4>
 <FluentDataGrid Items="@(TeamContext.Team.Members.AsQueryable())">
 	<PropertyColumn Sortable="true" Property="@(p => p.Nickname)" Title="Nickname" Class="content-center" />
 	<PropertyColumn Sortable="true" IsDefaultSortColumn="true" Property="@(p => p.Role.ToString())" Title="Team Role" Class="content-center" />

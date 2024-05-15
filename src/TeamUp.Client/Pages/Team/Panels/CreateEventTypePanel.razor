@@ -1,0 +1,29 @@
+﻿@implements IDialogContentComponent<CreateEventTypeInput>
+
+<FluentDialogBody>
+	<EditForm Model="@Content" Style="margin: 1px">
+		<CustomValidation @ref="ValidationComponent" />
+
+		<FluentTextField @bind-Value="@Content.Name" Required="true" Placeholder="name" Label="Event Type Name" />
+		<FluentValidationMessage For="() => Content.Name" Class="text-danger" />
+
+		<FluentTextField @bind-Value="@Content.Description" Required="true" Placeholder="description" Label="Event Type Description" />
+		<FluentValidationMessage For="() => Content.Name" Class="text-danger" />
+	</EditForm>
+</FluentDialogBody>
+
+@code
+{
+	[Parameter]
+	public CreateEventTypeInput Content { get; set; } = default!;
+
+	private CustomValidation ValidationComponent { get; set; } = null!;
+
+	protected override void OnAfterRender(bool firstRender)
+	{
+		if (Content?.Errors is not null)
+		{
+			ValidationComponent.DisplayErrors(Content.Errors);
+		}
+	}
+}

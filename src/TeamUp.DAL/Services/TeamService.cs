@@ -1,11 +1,12 @@
-﻿using CommunityToolkit.Mvvm.Messaging;
+﻿using System.Security.Claims;
 
-using Microsoft.Extensions.Logging;
+using CommunityToolkit.Mvvm.Messaging;
 
 using RailwayResult;
 using RailwayResult.FunctionalExtensions;
 
 using TeamUp.Contracts.Teams;
+using TeamUp.Contracts.Users;
 using TeamUp.DAL.Api;
 using TeamUp.DAL.Cache;
 using TeamUp.DAL.Messages;
@@ -105,7 +106,12 @@ public sealed class TeamService
 
 	public Task<Result<TeamResponse>> GetTeamAsync(TeamId teamId, bool forceFetch, CancellationToken ct)
 	{
-		return _cache.GetAsync($"team-{teamId.Value}", () => _client.GetTeamAsync(teamId, ct), TimeSpan.FromMinutes(10), forceFetch, ct);
+		return _cache.GetAsync($"team-{teamId.Value}", () => _client.GetTeamAsync(teamId, ct), TimeSpan.FromMinutes(15), forceFetch, ct);
+	}
+
+	public Task<Result<List<EventTypeResponse>>> GetEventTypesAsync(TeamId teamId, bool forceFetch, CancellationToken ct)
+	{
+		return GetTeamAsync(teamId, forceFetch, ct).Then(team => team.EventTypes);
 	}
 
 	public async Task<Result> ChangeNicknameAsync(TeamId teamId, ChangeNicknameRequest request, CancellationToken ct)
@@ -187,6 +193,43 @@ public sealed class TeamService
 					Team = team
 				});
 			}
+		});
+	}
+
+	public async Task<Result<EventTypeId>> CreateEventTypeAsync(TeamId teamId, UpsertEventTypeRequest request, CancellationToken ct)
+	{
+		var result = await _client.CreateEventTypeAsync(teamId, request, ct);
+		return await result.TapAsync(async eventTypeId =>
+		{
+			var newEventTypeResponse = new EventTypeResponse
+			{
+				Id = eventTypeId,
+				Name = request.Name,
+				Description = request.Description,
+			};
+
+			var team = await _cache.UpdateAsync<TeamResponse>($"team-{teamId.Value}", team => team.EventTypes.Add(newEventTypeResponse), ct);
+
+			if (team is not null)
+			{
+				_messenger.Send(new TeamDataUpdatedMessage
+				{
+					TeamId = teamId,
+					Team = team
+				});
+			}
+		});
+	}
+
+	public async Task<Result<TeamMemberResponse>> GetCurrentMember(TeamId teamId, bool forceFetch, CancellationToken ct)
+	{
+		var userId = await _authService.GetUserIdAsync();
+		var teamResult = await GetTeamAsync(teamId, forceFetch, ct);
+		return teamResult.Then(team =>
+		{
+			return team.Members
+				.Find(member => member.UserId == userId)
+				.EnsureNotNull(new DataAccessError("Team.CurrentMember.NotFound", "Current member not found."));
 		});
 	}
 }
