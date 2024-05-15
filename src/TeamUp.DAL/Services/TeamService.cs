@@ -54,7 +54,8 @@ public sealed class TeamService
 			var newTeam = new TeamSlimResponse
 			{
 				Name = request.Name,
-				TeamId = teamId
+				TeamId = teamId,
+				NumberOfTeamMembers = 1
 			};
 
 			await _cache.UpdateAsync<List<TeamSlimResponse>>("my-teams", teams => teams.Add(newTeam), ct);

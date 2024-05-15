@@ -128,7 +128,8 @@
 		self.teams.Add(new TeamSlimResponse
 		{
 			TeamId = message.TeamId,
-			Name = message.Name
+			Name = message.Name,
+			NumberOfTeamMembers = 1
 		});
 
 		self.StateHasChanged();

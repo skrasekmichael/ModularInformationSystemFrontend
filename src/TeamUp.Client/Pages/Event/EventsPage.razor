@@ -35,7 +35,7 @@
 			<PropertyColumn Property="@(p => p.Event.ToUtc.ToLocalTime())" Format="HH:mm" Title="To" Class="content-center" />
 			<PropertyColumn Property="@(p => p.Event.InitiatorResponse == null ? "-" : p.Event.InitiatorResponse.Type.ToString())" Align="Align.Center" Title="Your Response" Class="content-center" />
 			<TemplateColumn Title="Responses" Align="Align.Center" Style="overflow: unset">
-				<EventResponsesSummaryComponent ReplyCount="context.Event.ReplyCount" TeamCount="0" />
+				<EventResponsesSummaryComponent ReplyCount="context.Event.ReplyCount" TeamCount="context.Team.NumberOfTeamMembers" />
 			</TemplateColumn>
 			<TemplateColumn Title="Action" Class="content-center" Align="Align.Center">
 				<FluentAnchor Appearance="Appearance.Outline" IconStart="@(new Icons.Filled.Size20.Search())" Href="@($"/teams/{context.Team.TeamId.Value}/events/{context.Event.Id.Value}")" />
