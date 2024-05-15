@@ -1,0 +1,60 @@
+﻿@page "/activate/{userGuid:guid}"
+
+@inherits CancellableComponent
+
+@using RailwayResult
+
+@inject IAuthService AuthService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ApiClient ApiClient
+
+<PageTitle>Activate Account</PageTitle>
+
+<div class="d-flex flex-dir-column h-screen">
+	<FluentSpacer />
+	<FluentCard Style="margin-bottom: 200px" Class="body-small h-auto margin-auto padding-large">
+		@if (Result is not null)
+		{
+			<div class="padding-small d-flex">
+				@if (Result.IsSuccess)
+				{
+					<strong>Your account has been successfully activated.&nbsp;</strong>
+					<FluentIcon Icon="Icons.Filled.Size20.CheckmarkCircle" />
+				}
+				else
+				{
+					<FluentIcon Icon="Icons.Filled.Size20.Warning" />
+					<span style="margin-left: 8px">@Result.Error.Message</span>
+				}
+			</div>
+		}
+
+		<FluentDivider Style="margin-top: 16px"/>
+
+		<FluentStack Orientation="Orientation.Horizontal" Style="margin-top: 8px">
+			<FluentAnchor Href="login" Appearance="Appearance.Lightweight">Log in</FluentAnchor>
+			<FluentAnchor Href="register" Appearance="Appearance.Lightweight">Register</FluentAnchor>
+		</FluentStack>
+	</FluentCard>
+	<FluentSpacer />
+</div>
+
+@code
+{
+	[Parameter]
+	public Guid UserGuid { get; init; } = default!;
+
+	private Result? Result { get; set; }
+
+	protected override async Task OnInitializedAsync()
+	{
+		var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		if (state.User.Identity?.IsAuthenticated == true)
+		{
+			await AuthService.LogoutAsync("", CTS.Token);
+		}
+
+		var userId = UserId.FromGuid(UserGuid);
+		Result = await ApiClient.ActivateAsync(userId, CTS.Token);
+	}
+}

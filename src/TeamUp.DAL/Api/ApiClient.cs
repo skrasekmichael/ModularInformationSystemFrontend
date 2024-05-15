@@ -24,7 +24,7 @@ public sealed partial class ApiClient
 
 	private Task<Result> SendAsync(HttpMethod method, string uri, CancellationToken ct) => SendAsync(method, uri, null, ct);
 
-	private Task<Result> SendAsync(HttpMethod method, string uri, Action<HttpRequestMessage>? configure, CancellationToken ct)
+	private Task<Result> SendAsync(HttpMethod method, string uri, Func<HttpRequestMessage, bool>? configure, CancellationToken ct)
 	{
 		var request = new HttpRequestMessage
 		{
@@ -32,18 +32,19 @@ public sealed partial class ApiClient
 			RequestUri = new Uri(uri, UriKind.Relative),
 		};
 
+		var redirectOnUnAuthorized = true;
 		if (configure is not null)
 		{
-			configure(request);
+			redirectOnUnAuthorized = configure(request);
 		}
 
-		return SendRequestAsync(request, ct);
+		return SendRequestAsync(request, redirectOnUnAuthorized, ct);
 	}
 
 	private Task<Result<TResponse>> SendAsync<TResponse>(HttpMethod method, string uri, CancellationToken ct) =>
 		SendAsync<TResponse>(method, uri, null, ct);
 
-	private Task<Result<TResponse>> SendAsync<TResponse>(HttpMethod method, string uri, Action<HttpRequestMessage>? configure, CancellationToken ct)
+	private Task<Result<TResponse>> SendAsync<TResponse>(HttpMethod method, string uri, Func<HttpRequestMessage, bool>? configure, CancellationToken ct)
 	{
 		var request = new HttpRequestMessage
 		{
@@ -51,18 +52,19 @@ public sealed partial class ApiClient
 			RequestUri = new Uri(uri, UriKind.Relative),
 		};
 
+		var redirectOnUnAuthorized = true;
 		if (configure is not null)
 		{
-			configure(request);
+			redirectOnUnAuthorized = configure(request);
 		}
 
-		return SendRequestAsync<TResponse>(request, ct);
+		return SendRequestAsync<TResponse>(request, redirectOnUnAuthorized, ct);
 	}
 
 	private Task<Result<TResponse>> SendAsync<TRequest, TResponse>(HttpMethod method, string uri, TRequest payload, CancellationToken ct) =>
 		SendAsync<TRequest, TResponse>(method, uri, payload, null, ct);
 
-	private async Task<Result<TResponse>> SendAsync<TRequest, TResponse>(HttpMethod method, string uri, TRequest? payload, Action<HttpRequestMessage>? configure, CancellationToken ct)
+	private async Task<Result<TResponse>> SendAsync<TRequest, TResponse>(HttpMethod method, string uri, TRequest? payload, Func<HttpRequestMessage, bool>? configure, CancellationToken ct)
 	{
 		var json = JsonSerializer.Serialize(payload);
 		var request = new HttpRequestMessage
@@ -72,18 +74,19 @@ public sealed partial class ApiClient
 			Content = new StringContent(json, Encoding.UTF8, "application/json"),
 		};
 
+		var redirectOnUnAuthorized = true;
 		if (configure is not null)
 		{
-			configure(request);
+			redirectOnUnAuthorized = configure(request);
 		}
 
-		return await SendRequestAsync<TResponse>(request, ct);
+		return await SendRequestAsync<TResponse>(request, redirectOnUnAuthorized, ct);
 	}
 
 	private Task<Result> SendAsync<TRequest>(HttpMethod method, string uri, TRequest payload, CancellationToken ct) =>
 		SendAsync(method, uri, payload, null, ct);
 
-	private async Task<Result> SendAsync<TRequest>(HttpMethod method, string uri, TRequest? payload, Action<HttpRequestMessage>? configure, CancellationToken ct)
+	private async Task<Result> SendAsync<TRequest>(HttpMethod method, string uri, TRequest? payload, Func<HttpRequestMessage, bool>? configure, CancellationToken ct)
 	{
 		var json = JsonSerializer.Serialize(payload);
 		var request = new HttpRequestMessage
@@ -93,15 +96,16 @@ public sealed partial class ApiClient
 			Content = new StringContent(json, Encoding.UTF8, "application/json"),
 		};
 
+		var redirectOnUnAuthorized = true;
 		if (configure is not null)
 		{
-			configure(request);
+			redirectOnUnAuthorized = configure(request);
 		}
 
-		return await SendRequestAsync(request, ct);
+		return await SendRequestAsync(request, redirectOnUnAuthorized, ct);
 	}
 
-	private async Task<Result> SendRequestAsync(HttpRequestMessage request, CancellationToken ct)
+	private async Task<Result> SendRequestAsync(HttpRequestMessage request, bool redirectOnUnAuthorized, CancellationToken ct)
 	{
 		await InjectAuthToken(request, ct);
 
@@ -118,13 +122,13 @@ public sealed partial class ApiClient
 
 		if (!response.IsSuccessStatusCode)
 		{
-			return await ParseErrorResponse(response, ct);
+			return await ParseErrorResponse(response, redirectOnUnAuthorized, ct);
 		}
 
 		return Result.Success;
 	}
 
-	private async Task<Result<TResponse>> SendRequestAsync<TResponse>(HttpRequestMessage request, CancellationToken ct)
+	private async Task<Result<TResponse>> SendRequestAsync<TResponse>(HttpRequestMessage request, bool redirectOnUnAuthorized, CancellationToken ct)
 	{
 		await InjectAuthToken(request, ct);
 
@@ -141,7 +145,7 @@ public sealed partial class ApiClient
 
 		if (!response.IsSuccessStatusCode)
 		{
-			return await ParseErrorResponse(response, ct);
+			return await ParseErrorResponse(response, redirectOnUnAuthorized, ct);
 		}
 
 		var responsePayload = await response.Content.ReadFromJsonAsync<TResponse>(ct);
@@ -153,9 +157,9 @@ public sealed partial class ApiClient
 		return responsePayload;
 	}
 
-	private async Task<Error> ParseErrorResponse(HttpResponseMessage response, CancellationToken ct)
+	private async Task<Error> ParseErrorResponse(HttpResponseMessage response, bool redirectOnUnAuthorized, CancellationToken ct)
 	{
-		if (response.StatusCode == HttpStatusCode.Unauthorized)
+		if (redirectOnUnAuthorized && response.StatusCode == HttpStatusCode.Unauthorized)
 		{
 			await _authService.LogoutAsync(ct: ct);
 		}

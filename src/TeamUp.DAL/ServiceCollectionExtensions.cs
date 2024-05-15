@@ -30,7 +30,7 @@ public static class ServiceCollectionExtensions
 			.AddScoped<TeamService>()
 			.AddScoped<EventService>()
 			.AddScoped<InvitationsService>()
-			.AddScoped<LoginService>();
+			.AddScoped<AccountService>();
 	}
 
 	public static void AddClientDAL(this IServiceCollection services, string api)

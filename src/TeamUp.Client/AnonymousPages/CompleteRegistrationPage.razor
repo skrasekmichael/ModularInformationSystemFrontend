@@ -1,0 +1,104 @@
+﻿@page "/complete-registration/{userGuid:guid}"
+
+@rendermode InteractiveAuto
+
+@inherits CancellableComponent
+
+@using RailwayResult
+@using System.ComponentModel.DataAnnotations
+
+@inject ApiClient ApiClient
+@inject IAuthService AuthService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IToastService ToastService
+
+<PageTitle>Complete Registration</PageTitle>
+
+<div class="d-flex flex-dir-column h-screen">
+	<FluentSpacer />
+	<FluentCard Style="margin-bottom: 200px" Class="body-small h-auto margin-auto padding-large">
+		<h1 style="margin-bottom: 16px">Complete Your Registration</h1>
+		<FluentDivider Style="margin-bottom: 16px" />
+		
+		@if (completed)
+		{
+			<div class="padding-small d-flex">
+				<strong>Registration has been successfully completed.&nbsp;</strong>
+				<FluentIcon Icon="Icons.Filled.Size20.CheckmarkCircle" />
+			</div>
+
+			<FluentDivider Style="margin-top: 16px" />
+
+			<FluentStack Orientation="Orientation.Horizontal" Style="margin-top: 8px">
+				<FluentAnchor Href="login" Appearance="Appearance.Lightweight">Log in</FluentAnchor>
+				<FluentAnchor Href="register" Appearance="Appearance.Lightweight">Register</FluentAnchor>
+			</FluentStack>
+		}
+		else
+		{
+			<EditForm Model="@Input" OnValidSubmit="CompleteRegistrationAsync" FormName="CompleteRegistrationForm">
+				<CustomValidation />
+				<FluentStack Orientation="Orientation.Vertical">
+					<FluentTextField @bind-value="Input.Password" Immediate="true" AutoComplete="current-password" Required="true" Placeholder="password" Label="Password" type="password" Class="w-100" />
+					<FluentValidationMessage For="() => Input.Password" Class="text-danger" />
+
+					<FluentTextField @bind-value="Input.ConfirmPassword" Immediate="true" Required="true" Placeholder="password" Label="Confirm Password" type="password" Class="w-100" />
+					<FluentValidationMessage For="() => Input.ConfirmPassword" Class="text-danger" />
+
+					<FluentStack Orientation="Orientation.Horizontal" Style="margin-top: 8px">
+						<FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Complete</FluentButton>
+						<FluentAnchor Href="login" Appearance="Appearance.Lightweight">Log in</FluentAnchor>
+						<FluentAnchor Href="register" Appearance="Appearance.Lightweight">Register</FluentAnchor>
+					</FluentStack>
+				</FluentStack>
+			</EditForm>
+		}
+	</FluentCard>
+	<FluentSpacer />
+</div>
+
+@code
+{
+	[Parameter]
+	public Guid UserGuid { get; init; } = default!;
+
+	[SupplyParameterFromForm]
+	private RegisterModel Input { get; set; } = new();
+
+	private bool completed = false;
+
+	public async Task CompleteRegistrationAsync()
+	{
+		var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		if (state.User.Identity?.IsAuthenticated == true)
+		{
+			await AuthService.LogoutAsync("", CTS.Token);
+		}
+
+		var userId = UserId.FromGuid(UserGuid);
+		var result = await ApiClient.CompleteRegistrationAsync(userId, Input.Password, CTS.Token);
+		if (result.IsFailure)
+		{
+			ToastService.ShowError(result.Error.Message);
+			Input.Password = "";
+			Input.ConfirmPassword = "";
+			return;
+		}
+
+		ToastService.ShowSuccess("Registration completed");
+		completed = true;
+	}
+
+	private sealed class RegisterModel
+	{
+		[Required]
+		[DataType(DataType.Password)]
+		[Display(Name = "Password")]
+		public string Password { get; set; } = "";
+
+		[DataType(DataType.Password)]
+		[Display(Name = "Confirm password")]
+		[Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+		public string ConfirmPassword { get; set; } = "";
+	}
+}

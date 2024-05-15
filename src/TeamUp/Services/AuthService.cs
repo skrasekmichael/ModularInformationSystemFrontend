@@ -49,6 +49,9 @@ public sealed class AuthService : IAuthService
 			//authProvider.Logout();
 		}
 
-		_navigationManager.NavigateTo(url);
+		if (!string.IsNullOrWhiteSpace(url))
+		{
+			_navigationManager.NavigateTo(url);
+		}
 	}
 }
