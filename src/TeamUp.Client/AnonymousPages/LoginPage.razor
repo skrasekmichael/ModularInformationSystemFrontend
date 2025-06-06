@@ -82,7 +82,7 @@
 			return;
 		}
 
-		await CookieService.SetAsync("JWT", result.Value, null, CTS.Token);
+		await CookieService.SetAsync("JWT", result.Value, cancellationToken: CTS.Token);
 		if (AuthenticationStateProvider is ClientAuthenticationStateProvider persistAuthProvider)
 		{
 			persistAuthProvider.Login(result.Value);
